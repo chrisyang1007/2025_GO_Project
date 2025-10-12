@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>星空聊天室 — 互動強化版</title>
+<style>
+html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #e0f7fa; }
+body { display: flex; justify-content: center; align-items: center; }
+canvas#galaxy { position: fixed; top: 0; left: 0; z-index: -1; }
+.container { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border-radius: 12px; padding: 24px; box-shadow: 0 0 20px rgba(255,255,255,0.1); width: 92%; max-width: 980px; color: #fff; z-index: 1; }
+h2, h3 { margin: 8px 0 12px; }
+input, button, textarea { font-size: 1em; padding: 10px 12px; margin: 6px; border-radius: 8px; border: none; background: rgba(255,255,255,0.1); color: #fff; }
+button:hover { background: rgba(255,255,255,0.25); cursor: pointer; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#messages { list-style: none; padding: 10px; margin: 12px 0; height: 320px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; background: rgba(255,255,255,0.06); }
+.message { position: relative; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+.msg-body { flex: 1; }
+.msg-header { font-weight: 600; opacity: 0.9; margin-bottom: 4px; }
+.msg-content { white-space: pre-wrap; word-break: break-word; }
+.msg-media { max-width: 220px; max-height: 180px; border-radius: 8px; display: block; margin-top: 6px; cursor: zoom-in; }
+.reaction-bar { display: flex; gap: 6px; margin-top: 6px; opacity: 0.8; }
+.reaction-btn { background: rgba(255,255,255,0.12); border-radius: 14px; padding: 4px 8px; font-size: 0.95em; }
+.reaction-float { position: absolute; animation: floatUp 1.4s ease-out forwards; pointer-events: none; font-size: 20px; }
+@keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-36px); opacity: 0; } }
+.bullet { position: fixed; white-space: nowrap; animation: move 10s linear; font-weight: bold; font-size: 1.3em; color: #ffffff; text-shadow: 0 0 5px #00bcd4; }
+@keyframes move { from { right: -300px; } to { right: 100%; } }
+.tools { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 4px 0 10px; }
+.tools .row { gap: 10px; }
+.tool-box { border: 1px dashed rgba(0,200,255,0.4); border-radius: 10px; padding: 10px; background: rgba(0,0,0,0.2); }
+#dropzone { border: 2px dashed rgba(0,200,255,0.6); border-radius: 12px; padding: 14px; text-align: center; color: #aee; transition: 0.2s; }
+#dropzone.dragover { background: rgba(0,200,255,0.08); box-shadow: 0 0 10px rgba(0,200,255,0.4) inset; }
+.quiz-info { margin-left: 8px; color: #a8e; font-weight: 600; }
+audio { margin-top: 6px; width: 220px; }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: none; align-items: center; justify-content: center; z-index: 2; }
+.modal img { max-width: 90vw; max-height: 90vh; border-radius: 10px; }
+.footer-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.small { font-size: 0.9em; opacity: 0.8; }
+</style>
+</head>
+<body>
+<canvas id="galaxy"></canvas>
+
+<div class="container">
+  <h2>🌌 星空聊天室</h2>
+
+  <div id="login">
+    <div class="row">
+      <span>暱稱：</span><input id="nickname" placeholder="輸入暱稱">
+      <span>房間：</span><input id="room" value="default">
+    </div>
+    <div class="row">
+      <span>頭貼：</span><input type="file" id="upload" accept="image/*">
+      <button onclick="joinChat()">加入聊天室</button>
+      <button onclick="location.href='game.html'">🎮 小遊戲：猜數字</button>
+    </div>
+  </div>
+
+  <div id="chat" style="display:none;">
+    <h3 id="roomTitle"></h3>
+
+    <!-- 工具列：即時搶答、語音、圖片/GIF、拖曳上傳 -->
+    <div class="tools">
+      <div class="tool-box">
+        <div class="row">
+          <strong>即時搶答</strong>
+          <input id="quizQuestion" placeholder="題目（例如：1+1=？）">
+          <input id="quizAnswer" placeholder="答案（例如：2）">
+          <button onclick="startQuiz()">發起題目</button>
+          <span id="quizStatus" class="quiz-info"></span>
+        </div>
+        <div class="row">
+          <input id="quizMyAnswer" placeholder="你的答案">
+          <button onclick="submitQuizAnswer()">搶答</button>
+        </div>
+      </div>
+
+      <div class="tool-box">
+        <div class="row">
+          <strong>語音訊息</strong>
+          <button id="recBtn" onclick="toggleRecord()">開始錄音</button>
+          <span id="sttStatus" class="small"></span>
+        </div>
+      </div>
+
+      <div class="tool-box">
+        <div class="row">
+          <strong>圖片 / GIF 分享</strong>
+          <input type="file" id="imgPicker" accept="image/*" multiple>
+          <button onclick="sendPickedImages()">送出選取檔案</button>
+        </div>
+        <div id="dropzone">將圖片或 GIF 拖曳到此處上傳</div>
+      </div>
+    </div>
+
+    <ul id="messages"></ul>
+
+    <!-- 輸入列 + 反應預覽 -->
+    <div class="footer-row">
+      <div class="row" style="flex: 1 1 420px;">
+        <input id="msg" placeholder="輸入訊息並送出（輸入 '流星' 可觸發特效）" style="flex:1;">
+        <button onclick="sendMessage()">送出</button>
+      </div>
+      <div class="row small">提示：點擊訊息下的 👍 😂 ❤️ 🚀 可以送出表情反應</div>
+    </div>
+
+    <div class="row" style="margin-top:10px;">
+      <button onclick="leaveRoom()">退出房間</button>
+      <input id="newRoom" placeholder="新房間">
+      <button onclick="switchRoom()">切換房間</button>
+    </div>
+  </div>
+</div>
+
+<!-- 圖片放大 Modal -->
+<div id="imgModal" class="modal" onclick="hideModal()">
+  <img id="modalImg" src="">
+</div>
+
+<script>
+// ===== 背景：黑藍星系 + 流星 + 閃爍 + 關鍵字特效 =====
+const canvas = document.getElementById('galaxy');
+const ctx = canvas.getContext('2d');
+let width = canvas.width = window.innerWidth;
+let height = canvas.height = window.innerHeight;
+
+const stars = [];
+const STAR_COUNT = 600;
+for (let i = 0; i < STAR_COUNT; i++) {
+  stars.push({
+    x: Math.random() * width - width / 2,
+    y: Math.random() * height - height / 2,
+    z: Math.random() * width,
+    radius: Math.random() * 1.5 + 0.5,
+    baseColor: `hsl(${200 + Math.random() * 40}, 100%, ${70 + Math.random() * 20}%)`,
+    brightness: 1
+  });
+}
+
+let meteors = [];
+function spawnMeteor() {
+  const startX = Math.random() * width;
+  const startY = Math.random() * height * 0.3;
+  const length = Math.random() * 80 + 50;
+  const speed = Math.random() * 4 + 6;
+  meteors.push({ x: startX, y: startY, length, speed, angle: Math.PI/4, opacity: 1 });
+}
+function spawnSpecialMeteor() {
+  const startX = Math.random() * width;
+  const startY = Math.random() * height * 0.3;
+  const length = Math.random() * 150 + 100;
+  const speed = Math.random() * 6 + 10;
+  meteors.push({ x: startX, y: startY, length, speed, angle: Math.PI/4, opacity: 1.2 });
+}
+setInterval(() => { if (meteors.length < 5) spawnMeteor(); }, Math.random()*2500 + 1500);
+
+function drawGalaxy() {
+  const g = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, width);
+  g.addColorStop(0, 'rgba(10, 20, 40, 0.9)'); g.addColorStop(1, 'rgba(0, 0, 0, 1)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, width, height);
+
+  for (let star of stars) {
+    star.z -= 2.5;
+    if (star.z <= 0) { star.z = width; star.x = Math.random()*width - width/2; star.y = Math.random()*height - height/2; }
+    const k = 128 / star.z, px = star.x * k + width/2, py = star.y * k + height/2;
+    if (star.brightness > 1) star.brightness -= 0.02;
+    ctx.beginPath(); ctx.arc(px, py, star.radius, 0, Math.PI*2);
+    ctx.fillStyle = star.baseColor; ctx.globalAlpha = star.brightness; ctx.shadowBlur = 10; ctx.shadowColor = star.baseColor; ctx.fill(); ctx.globalAlpha = 1;
+  }
+
+  for (let i = meteors.length - 1; i >= 0; i--) {
+    const m = meteors[i];
+    ctx.strokeStyle = `rgba(173,216,255,${m.opacity})`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(m.x, m.y);
+    ctx.lineTo(m.x - m.length * Math.cos(m.angle), m.y - m.length * Math.sin(m.angle));
+    ctx.stroke();
+
+    for (let star of stars) {
+      const k = 128 / star.z, px = star.x * k + width/2, py = star.y * k + height/2;
+      if (Math.hypot(px - m.x, py - m.y) < 100) star.brightness = 2;
+    }
+    m.x += m.speed * Math.cos(m.angle);
+    m.y += m.speed * Math.sin(m.angle);
+    m.opacity -= 0.01;
+    if (m.opacity <= 0) meteors.splice(i, 1);
+  }
+  requestAnimationFrame(drawGalaxy);
+}
+drawGalaxy();
+addEventListener('resize', () => { width = canvas.width = innerWidth; height = canvas.height = innerHeight; });
+
+// ===== 基本聊天室變數 =====
+let ws, nickname, room, avatar, customAvatar = "";
+const $ = (id) => document.getElementById(id);
+const messagesEl = $('messages');
+
+// 產生用於訊息關聯的 ID
+const genId = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
+
+// 頭貼上傳（只允許自訂頭貼）
+$('upload').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => { customAvatar = reader.result; };
+  reader.readAsDataURL(f);
+});
+
+// ===== 加入聊天室 =====
+function joinChat() {
+  nickname = $('nickname').value.trim();
+  room = $('room').value.trim();
+  avatar = customAvatar;
+  if (!nickname || !room || !avatar) return alert("請輸入暱稱、房間，並上傳頭貼");
+
+  ws = new WebSocket(`ws://${location.host}/ws`);
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'join', nickname, room, avatar }));
+  };
+  ws.onmessage = (ev) => handleIncoming(JSON.parse(ev.data));
+
+  $('login').style.display = 'none';
+  $('chat').style.display = 'block';
+  $('roomTitle').textContent = `房間：${room}`;
+}
+
+// ===== 發送純文字訊息 + 彈幕 + 關鍵字特效（由所有人接收後觸發）=====
+function sendMessage() {
+  const content = $('msg').value.trim();
+  if (!content) return;
+  const id = genId();
+  ws.send(JSON.stringify({ type: 'chat', id, nickname, room, avatar, content }));
+  $('msg').value = '';
+}
+
+// ===== 投票（沿用你原有的概念）=====
+function sendVote(option) {
+  ws.send(JSON.stringify({ type: 'vote', nickname, room, avatar, content: option }));
+}
+
+// ===== 退出 / 切換 =====
+function leaveRoom() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: 'leave', nickname, room }));
+    ws.close();
+  }
+  messagesEl.innerHTML = '';
+  $('chat').style.display = 'none';
+  $('login').style.display = 'block';
+}
+function switchRoom() {
+  const newR = $('newRoom').value.trim(); if (!newR) return;
+  ws.send(JSON.stringify({ type: 'switch', nickname, room, content: newR }));
+  room = newR; $('roomTitle').textContent = `房間：${room}`;
+}
+
+// ===== 即時搶答 =====
+let quizActive = false;
+let quizAnswer = '';
+function startQuiz() {
+  const q = $('quizQuestion').value.trim();
+  const a = $('quizAnswer').value.trim();
+  if (!q || !a) return alert('請輸入題目與答案');
+  ws.send(JSON.stringify({ type: 'quiz_start', nickname, room, question: q, answer: a }));
+}
+function submitQuizAnswer() {
+  const a = $('quizMyAnswer').value.trim();
+  if (!quizActive) return alert('目前沒有進行中的題目');
+  if (!a) return;
+  ws.send(JSON.stringify({ type: 'quiz_answer', nickname, room, answer: a }));
+  $('quizMyAnswer').value = '';
+}
+
+// ===== 表情反應（對特定訊息）=====
+const REACTIONS = ['👍','😂','❤️','🚀'];
+function sendReaction(messageId, emoji) {
+  ws.send(JSON.stringify({ type: 'reaction', nickname, room, messageId, emoji }));
+}
+
+// ===== 語音訊息 + 語音轉文字 =====
+let mediaRecorder = null, chunks = [], recognizing = false, speechRec = null;
+function toggleRecord() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop(); $('recBtn').textContent = '開始錄音';
+    if (speechRec && recognizing) speechRec.stop();
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    mediaRecorder = new MediaRecorder(stream);
+    chunks = [];
+    mediaRecorder.ondataavailable = e => chunks.push(e.data);
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      const base64 = await blobToDataURL(blob);
+      // 若有 STT 結果就一起帶上
+      ws.send(JSON.stringify({ type: 'voice', nickname, room, avatar, audio: base64, transcript: lastTranscript }));
+      lastTranscript = '';
+      $('sttStatus').textContent = '';
+    };
+    mediaRecorder.start();
+    $('recBtn').textContent = '停止錄音';
+    tryStartSTT();
+  }).catch(() => alert('無法取得麥克風'));
+}
+function blobToDataURL(blob) {
+  return new Promise(res => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.readAsDataURL(blob);
+  });
+}
+let lastTranscript = '';
+function tryStartSTT() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { $('sttStatus').textContent = '（裝置不支援語音轉文字）'; return; }
+  speechRec = new SR();
+  speechRec.lang = 'zh-TW';
+  speechRec.interimResults = true;
+  recognizing = true;
+  speechRec.onresult = e => {
+    let text = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) text += e.results[i][0].transcript;
+    lastTranscript = text;
+    $('sttStatus').textContent = 'STT：' + text;
+  };
+  speechRec.onend = () => recognizing = false;
+  try { speechRec.start(); } catch {}
+}
+
+// ===== 圖片/GIF 上傳 + 拖曳 =====
+$('imgPicker').addEventListener('change', async (e) => {
+  await sendFiles(e.target.files);
+  e.target.value = '';
+});
+$('dropzone').addEventListener('dragover', e => { e.preventDefault(); $('dropzone').classList.add('dragover'); });
+$('dropzone').addEventListener('dragleave', () => $('dropzone').classList.remove('dragover'));
+$('dropzone').addEventListener('drop', async e => {
+  e.preventDefault(); $('dropzone').classList.remove('dragover');
+  await sendFiles(e.dataTransfer.files);
+});
+function sendPickedImages() {
+  $('imgPicker').click();
+}
+async function sendFiles(fileList) {
+  const files = Array.from(fileList || []);
+  for (const f of files) {
+    if (!f.type.startsWith('image/')) continue;
+    const dataUrl = await fileToDataURL(f);
+    ws.send(JSON.stringify({ type: 'image', nickname, room, avatar, name: f.name, mime: f.type, dataUrl }));
+  }
+}
+function fileToDataURL(file) {
+  return new Promise(res => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.readAsDataURL(file);
+  });
+}
+
+// ===== 收到訊息的總處理 =====
+function handleIncoming(msg) {
+  switch (msg.type) {
+    case 'chat':
+      renderChatMessage(msg);
+      if (msg.content && msg.content.includes('流星')) spawnSpecialMeteor();
+      break;
+    case 'reaction':
+      renderReaction(msg.messageId, msg.emoji);
+      break;
+    case 'image':
+      renderImageMessage(msg);
+      break;
+    case 'voice':
+      renderVoiceMessage(msg);
+      break;
+    case 'quiz_start':
+      quizActive = true; quizAnswer = (msg.answer || '').trim();
+      $('quizStatus').textContent = `題目：${msg.question}（搶答開始！）`;
+      addSystemMessage(`【搶答】${msg.nickname} 發起題目：${msg.question}`);
+      break;
+    case 'quiz_answer':
+      // 第一個答對的人廣播 quiz_result；為簡化，任一端判斷正確即廣播（示範用）
+      if (quizActive && normalize(msg.answer) === normalize(quizAnswer)) {
+        ws.send(JSON.stringify({ type: 'quiz_result', nickname: msg.nickname, room, correct: true, answer: msg.answer }));
+      }
+      break;
+    case 'quiz_result':
+      quizActive = false;
+      $('quizStatus').textContent = `🏆 得主：${msg.nickname}，答案：${msg.answer}`;
+      addSystemMessage(`🏆 【搶答結果】${msg.nickname} 率先答對！答案：${msg.answer}`);
+      break;
+    default:
+      // 其他自定型別...
+      break;
+  }
+}
+
+// ===== UI 渲染 =====
+function renderChatMessage(msg) {
+  const li = document.createElement('li'); li.className = 'message'; li.dataset.id = msg.id || genId();
+  const img = document.createElement('img'); img.className = 'avatar'; img.src = msg.avatar || ''; li.appendChild(img);
+  const body = document.createElement('div'); body.className = 'msg-body';
+  const header = document.createElement('div'); header.className = 'msg-header'; header.textContent = `[${msg.nickname}]`;
+  const content = document.createElement('div'); content.className = 'msg-content'; content.textContent = msg.content || '';
+  const bar = document.createElement('div'); bar.className = 'reaction-bar';
+  REACTIONS.forEach(em => {
+    const b = document.createElement('button'); b.className = 'reaction-btn'; b.textContent = em;
+    b.onclick = () => sendReaction(li.dataset.id, em);
+    bar.appendChild(b);
+  });
+  body.appendChild(header); body.appendChild(content); body.appendChild(bar);
+  li.appendChild(body);
+  messagesEl.appendChild(li);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  // 彈幕
+  if (msg.content && msg.content.trim() !== '') {
+    const bullet = document.createElement('div'); bullet.className = 'bullet';
+    bullet.style.top = Math.random() * 80 + '%'; bullet.textContent = msg.content;
+    document.body.appendChild(bullet); setTimeout(() => bullet.remove(), 10000);
+  }
+}
+
+function renderImageMessage(msg) {
+  const li = document.createElement('li'); li.className = 'message'; li.dataset.id = msg.id || genId();
+  const imgA = document.createElement('img'); imgA.className = 'avatar'; imgA.src = msg.avatar || ''; li.appendChild(imgA);
+  const body = document.createElement('div'); body.className = 'msg-body';
+  const header = document.createElement('div'); header.className = 'msg-header'; header.textContent = `[${msg.nickname}] 分享了圖片 ${msg.name || ''}`;
+  const media = document.createElement('img'); media.className = 'msg-media'; media.src = msg.dataUrl; media.alt = msg.name || 'image';
+  media.onclick = () => showModal(media.src);
+  const bar = document.createElement('div'); bar.className = 'reaction-bar';
+  REACTIONS.forEach(em => {
+    const b = document.createElement('button'); b.className = 'reaction-btn'; b.textContent = em;
+    b.onclick = () => sendReaction(li.dataset.id, em);
+    bar.appendChild(b);
+  });
+  body.appendChild(header); body.appendChild(media); body.appendChild(bar);
+  li.appendChild(body);
+  messagesEl.appendChild(li);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function renderVoiceMessage(msg) {
+  const li = document.createElement('li'); li.className = 'message'; li.dataset.id = msg.id || genId();
+  const imgA = document.createElement('img'); imgA.className = 'avatar'; imgA.src = msg.avatar || ''; li.appendChild(imgA);
+  const body = document.createElement('div'); body.className = 'msg-body';
+  const header = document.createElement('div'); header.className = 'msg-header'; header.textContent = `[${msg.nickname}] 語音訊息`;
+  const audio = document.createElement('audio'); audio.controls = true; audio.src = msg.audio;
+  const transcript = document.createElement('div'); transcript.className = 'msg-content'; transcript.style.opacity = '0.85';
+  transcript.textContent = msg.transcript ? `STT：${msg.transcript}` : '';
+  const bar = document.createElement('div'); bar.className = 'reaction-bar';
+  REACTIONS.forEach(em => {
+    const b = document.createElement('button'); b.className = 'reaction-btn'; b.textContent = em;
+    b.onclick = () => sendReaction(li.dataset.id, em);
+    bar.appendChild(b);
+  });
+  body.appendChild(header); body.appendChild(audio); if (msg.transcript) body.appendChild(transcript); body.appendChild(bar);
+  li.appendChild(body);
+  messagesEl.appendChild(li);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function renderReaction(messageId, emoji) {
+  // 找到訊息元素
+  const target = Array.from(messagesEl.children).find(li => li.dataset.id === messageId);
+  if (!target) return;
+  // 漂浮動畫
+  const flo = document.createElement('div'); flo.className = 'reaction-float'; flo.textContent = emoji;
+  flo.style.left = '60px'; flo.style.top = '10px';
+  target.appendChild(flo); setTimeout(() => flo.remove(), 1400);
+}
+
+// 系統訊息
+function addSystemMessage(text) {
+  const li = document.createElement('li'); li.className = 'message';
+  const body = document.createElement('div'); body.className = 'msg-body';
+  const header = document.createElement('div'); header.className = 'msg-header'; header.textContent = '系統';
+  const content = document.createElement('div'); content.className = 'msg-content'; content.textContent = text;
+  body.appendChild(header); body.appendChild(content); li.appendChild(body);
+  messagesEl.appendChild(li);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+// 工具
+function normalize(s) { return (s || '').toString().trim().toLowerCase(); }
+
+// 圖片放大
+function showModal(src) { $('modalImg').src = src; $('imgModal').style.display = 'flex'; }
+function hideModal() { $('imgModal').style.display = 'none'; $('modalImg').src = ''; }
+</script>
+</body>
+</html>

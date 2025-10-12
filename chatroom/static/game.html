@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>猜數字競技版</title>
+<style>
+body {
+  font-family: Arial;
+  text-align: center;
+  margin-top: 40px;
+}
+input, button {
+  font-size: 1.2em;
+  padding: 8px;
+  margin: 10px;
+}
+#result {
+  font-size: 1.3em;
+  margin-top: 20px;
+}
+table {
+  margin: 20px auto;
+  border-collapse: collapse;
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px 12px;
+}
+</style>
+</head>
+<body>
+<h2>🎮 猜數字競技版</h2>
+<p>我已選好一個 1 到 100 的數字，來挑戰吧！</p>
+<p>⏱️ 時間：<span id="timer">0</span> 秒</p>
+<input id="guess" type="number" placeholder="輸入你的猜測">
+<button onclick="checkGuess()">猜！</button>
+<p id="result"></p>
+<button onclick="resetGame()">重新開始</button>
+<br><br>
+<button onclick="location.href='index.html'">返回聊天室</button>
+
+<h3>🏆 排行榜</h3>
+<table>
+  <thead>
+    <tr><th>暱稱</th><th>次數</th><th>時間 (秒)</th></tr>
+  </thead>
+  <tbody id="leaderboard"></tbody>
+</table>
+
+<script>
+let answer = Math.floor(Math.random() * 100) + 1;
+let attempts = 0;
+let startTime = Date.now();
+let timerInterval = setInterval(updateTimer, 1000);
+let finished = false;
+
+function updateTimer() {
+  if (!finished) {
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById("timer").textContent = elapsed;
+  }
+}
+
+function checkGuess() {
+  const guess = parseInt(document.getElementById("guess").value);
+  if (isNaN(guess) || guess < 1 || guess > 100) {
+    document.getElementById("result").textContent = "請輸入 1 到 100 的整數！";
+    return;
+  }
+  attempts++;
+  if (guess < answer) {
+    document.getElementById("result").textContent = `太小了！目前猜了 ${attempts} 次`;
+  } else if (guess > answer) {
+    document.getElementById("result").textContent = `太大了！目前猜了 ${attempts} 次`;
+  } else {
+    finished = true;
+    clearInterval(timerInterval);
+    const timeUsed = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById("result").textContent = `🎉 恭喜你猜對了！總共猜了 ${attempts} 次，用了 ${timeUsed} 秒`;
+    setTimeout(() => {
+      const name = prompt("請輸入暱稱以加入排行榜：");
+      if (name) {
+        saveScore(name, attempts, timeUsed);
+        renderLeaderboard();
+      }
+    }, 500);
+  }
+}
+
+function resetGame() {
+  answer = Math.floor(Math.random() * 100) + 1;
+  attempts = 0;
+  startTime = Date.now();
+  finished = false;
+  document.getElementById("guess").value = "";
+  document.getElementById("result").textContent = "";
+  document.getElementById("timer").textContent = "0";
+  clearInterval(timerInterval);
+  timerInterval = setInterval(updateTimer, 1000);
+}
+
+function saveScore(name, tries, time) {
+  const scores = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+  scores.push({ name, tries, time });
+  scores.sort((a, b) => a.tries - b.tries || a.time - b.time);
+  localStorage.setItem("leaderboard", JSON.stringify(scores.slice(0, 10)));
+}
+
+function renderLeaderboard() {
+  const scores = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+  const tbody = document.getElementById("leaderboard");
+  tbody.innerHTML = "";
+  scores.forEach(score => {
+    const row = document.createElement("tr");
+    row.innerHTML = `<td>${score.name}</td><td>${score.tries}</td><td>${score.time}</td>`;
+    tbody.appendChild(row);
+  });
+}
+
+renderLeaderboard();
+</script>
+</body>
+</html>
