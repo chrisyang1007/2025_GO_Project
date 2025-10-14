@@ -181,9 +181,23 @@ func broadcastUserList(room string) {
 func handleMessages() {
 	for {
 		msg := <-broadcast
-		msg.Timestamp = time.Now().Format("15:04")
+
+		if msg.Type != "typing_start" && msg.Type != "typing_stop" {
+			msg.Timestamp = time.Now().Format("15:04")
+		}
 
 		switch msg.Type {
+		case "typing_start", "typing_stop":
+			roomsMutex.Lock()
+			for client := range rooms[msg.Room] {
+				if client.nickname != msg.Nickname {
+					if err := client.conn.WriteJSON(msg); err != nil {
+						log.Println("WriteJSON error (typing):", err)
+					}
+				}
+			}
+			roomsMutex.Unlock()
+			continue
 		case "vote":
 			votesMutex.Lock()
 			if votes[msg.Room] == nil {

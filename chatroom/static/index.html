@@ -97,6 +97,8 @@ audio { margin-top: 6px; width: 220px; }
 
         <ul id="messages"></ul>
 
+        <div id="typing-indicator" class="small" style="height: 20px; padding-left: 10px;"></div>
+
         <!-- 輸入列 + 反應預覽 -->
         <div class="footer-row">
           <div class="row" style="flex: 1 1 420px;">
@@ -203,6 +205,24 @@ addEventListener('resize', () => { width = canvas.width = innerWidth; height = c
 let ws, nickname, room, avatar, customAvatar = "";
 const $ = (id) => document.getElementById(id);
 const messagesEl = $('messages');
+let typingTimer;
+const typingUsers = new Set();
+
+// ===== 鍵盤輸入事件 =====
+$('msg').addEventListener('keydown', () => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    clearTimeout(typingTimer);
+    ws.send(JSON.stringify({ type: 'typing_start', nickname, room }));
+});
+
+$('msg').addEventListener('keyup', () => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+        ws.send(JSON.stringify({ type: 'typing_stop', nickname, room }));
+    }, 2000); // 2秒後發送停止
+});
+
 
 // 產生用於訊息關聯的 ID
 const genId = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
@@ -238,6 +258,12 @@ function sendMessage() {
   const content = $('msg').value.trim();
   if (!content) return;
   const id = genId();
+  
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    clearTimeout(typingTimer);
+    ws.send(JSON.stringify({ type: 'typing_stop', nickname, room }));
+  }
+
   ws.send(JSON.stringify({ type: 'chat', id, nickname, room, avatar, content }));
   $('msg').value = '';
 }
@@ -407,9 +433,36 @@ function handleIncoming(msg) {
     case 'user_list':
       renderUserList(JSON.parse(msg.content));
       break;
+    case 'typing_start':
+      if (msg.nickname === nickname) return;
+      typingUsers.add(msg.nickname);
+      updateTypingIndicator();
+      break;
+    case 'typing_stop':
+      if (msg.nickname === nickname) return;
+      typingUsers.delete(msg.nickname);
+      updateTypingIndicator();
+      break;
     default:
       // 其他自定型別...
       break;
+  }
+}
+
+function updateTypingIndicator() {
+  const indicator = $('typing-indicator');
+  if (typingUsers.size === 0) {
+    indicator.textContent = '';
+    return;
+  }
+  
+  const users = Array.from(typingUsers);
+  if (users.length === 1) {
+    indicator.textContent = `${users[0]} is typing...`;
+  } else if (users.length === 2) {
+    indicator.textContent = `${users.join(' and ')} are typing...`;
+  } else {
+    indicator.textContent = 'Several people are typing...';
   }
 }
 
