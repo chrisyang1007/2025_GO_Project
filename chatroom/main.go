@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -88,6 +90,8 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	rooms[client.room][client] = true
 	roomsMutex.Unlock()
 
+	broadcastUserList(client.room)
+
 	historyMutex.Lock()
 	for _, msg := range history[client.room] {
 		ws.WriteJSON(msg)
@@ -98,28 +102,38 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		var msg Message
 		err := ws.ReadJSON(&msg)
 		if err != nil {
+			roomToUpdate := client.room
 			roomsMutex.Lock()
-			delete(rooms[client.room], client)
+			delete(rooms[roomToUpdate], client)
 			roomsMutex.Unlock()
+			broadcastUserList(roomToUpdate)
 			break
 		}
 
 		if msg.Type == "leave" {
+			roomToUpdate := client.room
 			roomsMutex.Lock()
-			delete(rooms[client.room], client)
+			delete(rooms[roomToUpdate], client)
 			roomsMutex.Unlock()
+			broadcastUserList(roomToUpdate)
 			break
 		}
 
 		if msg.Type == "switch" {
+			oldRoom := client.room
+			newRoom := msg.Content
+
 			roomsMutex.Lock()
-			delete(rooms[client.room], client)
-			client.room = msg.Content
-			if rooms[client.room] == nil {
-				rooms[client.room] = make(map[*Client]bool)
+			delete(rooms[oldRoom], client)
+			client.room = newRoom
+			if rooms[newRoom] == nil {
+				rooms[newRoom] = make(map[*Client]bool)
 			}
-			rooms[client.room][client] = true
+			rooms[newRoom][client] = true
 			roomsMutex.Unlock()
+
+			broadcastUserList(oldRoom)
+			broadcastUserList(newRoom)
 
 			historyMutex.Lock()
 			for _, hmsg := range history[client.room] {
@@ -130,6 +144,35 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		}
 
 		broadcast <- msg
+	}
+}
+
+func broadcastUserList(room string) {
+	roomsMutex.Lock()
+	defer roomsMutex.Unlock()
+
+	var users []string
+	for client := range rooms[room] {
+		users = append(users, client.nickname)
+	}
+	sort.Strings(users)
+
+	userListJSON, err := json.Marshal(users)
+	if err != nil {
+		log.Println("Error marshalling user list:", err)
+		return
+	}
+
+	msg := Message{
+		Type:    "user_list",
+		Room:    room,
+		Content: string(userListJSON),
+	}
+
+	for client := range rooms[room] {
+		if err := client.conn.WriteJSON(msg); err != nil {
+			log.Println("WriteJSON error:", err)
+		}
 	}
 }
 

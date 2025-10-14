@@ -57,57 +57,67 @@ audio { margin-top: 6px; width: 220px; }
   </div>
 
   <div id="chat" style="display:none;">
-    <h3 id="roomTitle"></h3>
+    <div style="display: flex; gap: 16px;">
+      <div id="chat-container" style="flex: 1;">
+        <h3 id="roomTitle"></h3>
 
-    <!-- 工具列：即時搶答、語音、圖片/GIF、拖曳上傳 -->
-    <div class="tools">
-      <div class="tool-box">
-        <div class="row">
-          <strong>即時搶答</strong>
-          <input id="quizQuestion" placeholder="題目（例如：1+1=？）">
-          <input id="quizAnswer" placeholder="答案（例如：2）">
-          <button onclick="startQuiz()">發起題目</button>
-          <span id="quizStatus" class="quiz-info"></span>
+        <!-- 工具列：即時搶答、語音、圖片/GIF、拖曳上傳 -->
+        <div class="tools">
+          <div class="tool-box">
+            <div class="row">
+              <strong>即時搶答</strong>
+              <input id="quizQuestion" placeholder="題目（例如：1+1=？）">
+              <input id="quizAnswer" placeholder="答案（例如：2）">
+              <button onclick="startQuiz()">發起題目</button>
+              <span id="quizStatus" class="quiz-info"></span>
+            </div>
+            <div class="row">
+              <input id="quizMyAnswer" placeholder="你的答案">
+              <button onclick="submitQuizAnswer()">搶答</button>
+            </div>
+          </div>
+
+          <div class="tool-box">
+            <div class="row">
+              <strong>語音訊息</strong>
+              <button id="recBtn" onclick="toggleRecord()">開始錄音</button>
+              <span id="sttStatus" class="small"></span>
+            </div>
+          </div>
+
+          <div class="tool-box">
+            <div class="row">
+              <strong>圖片 / GIF 分享</strong>
+              <input type="file" id="imgPicker" accept="image/*" multiple>
+              <button onclick="sendPickedImages()">送出選取檔案</button>
+            </div>
+            <div id="dropzone">將圖片或 GIF 拖曳到此處上傳</div>
+          </div>
         </div>
-        <div class="row">
-          <input id="quizMyAnswer" placeholder="你的答案">
-          <button onclick="submitQuizAnswer()">搶答</button>
+
+        <ul id="messages"></ul>
+
+        <!-- 輸入列 + 反應預覽 -->
+        <div class="footer-row">
+          <div class="row" style="flex: 1 1 420px;">
+            <input id="msg" placeholder="輸入訊息並送出（輸入 '流星' 可觸發特效）" style="flex:1;">
+            <button onclick="sendMessage()">送出</button>
+          </div>
+          <div class="row small">提示：點擊訊息下的 👍 😂 ❤️ 🚀 可以送出表情反應</div>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <button onclick="leaveRoom()">退出房間</button>
+          <input id="newRoom" placeholder="新房間">
+          <button onclick="switchRoom()">切換房間</button>
         </div>
       </div>
 
-      <div class="tool-box">
-        <div class="row">
-          <strong>語音訊息</strong>
-          <button id="recBtn" onclick="toggleRecord()">開始錄音</button>
-          <span id="sttStatus" class="small"></span>
-        </div>
+      <div id="sidebar" style="width: 200px; background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px; height: fit-content;">
+        <h4>🚀 線上使用者</h4>
+        <ul id="user-list" style="list-style: none; padding: 0; margin: 0; color: #e0f7fa;">
+        </ul>
       </div>
-
-      <div class="tool-box">
-        <div class="row">
-          <strong>圖片 / GIF 分享</strong>
-          <input type="file" id="imgPicker" accept="image/*" multiple>
-          <button onclick="sendPickedImages()">送出選取檔案</button>
-        </div>
-        <div id="dropzone">將圖片或 GIF 拖曳到此處上傳</div>
-      </div>
-    </div>
-
-    <ul id="messages"></ul>
-
-    <!-- 輸入列 + 反應預覽 -->
-    <div class="footer-row">
-      <div class="row" style="flex: 1 1 420px;">
-        <input id="msg" placeholder="輸入訊息並送出（輸入 '流星' 可觸發特效）" style="flex:1;">
-        <button onclick="sendMessage()">送出</button>
-      </div>
-      <div class="row small">提示：點擊訊息下的 👍 😂 ❤️ 🚀 可以送出表情反應</div>
-    </div>
-
-    <div class="row" style="margin-top:10px;">
-      <button onclick="leaveRoom()">退出房間</button>
-      <input id="newRoom" placeholder="新房間">
-      <button onclick="switchRoom()">切換房間</button>
     </div>
   </div>
 </div>
@@ -394,6 +404,9 @@ function handleIncoming(msg) {
       $('quizStatus').textContent = `🏆 得主：${msg.nickname}，答案：${msg.answer}`;
       addSystemMessage(`🏆 【搶答結果】${msg.nickname} 率先答對！答案：${msg.answer}`);
       break;
+    case 'user_list':
+      renderUserList(JSON.parse(msg.content));
+      break;
     default:
       // 其他自定型別...
       break;
@@ -401,6 +414,19 @@ function handleIncoming(msg) {
 }
 
 // ===== UI 渲染 =====
+function renderUserList(users) {
+  const userListEl = $('user-list');
+  userListEl.innerHTML = '';
+  if (users && users.length > 0) {
+    users.forEach(user => {
+      const li = document.createElement('li');
+      li.textContent = user;
+      li.style.padding = '5px';
+      li.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
+      userListEl.appendChild(li);
+    });
+  }
+}
 function renderChatMessage(msg) {
   const li = document.createElement('li'); li.className = 'message'; li.dataset.id = msg.id || genId();
   const img = document.createElement('img'); img.className = 'avatar'; img.src = msg.avatar || ''; li.appendChild(img);
