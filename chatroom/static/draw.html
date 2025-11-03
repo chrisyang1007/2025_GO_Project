@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>你畫我猜</title>
+<style>
+/* ✨ (功能 2) 改回 Canvas 星空 */
+html, body { 
+  margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; 
+  color: #e0f7fa; background-color: #0a0a1a;
+  overflow: hidden;
+}
+canvas#galaxy { position: fixed; top: 0; left: 0; z-index: -1; } /* 星空畫布 */
+
+.container { 
+  display: flex;
+  background: rgba(255,255,255,0.05); 
+  backdrop-filter: blur(10px); 
+  border-radius: 12px; 
+  box-shadow: 0 0 20px rgba(255,255,255,0.1); 
+  width: 95%; 
+  max-width: 1400px; 
+  height: 85vh;
+  margin: auto;
+  margin-top: 5vh;
+  color: #fff; 
+  z-index: 1;
+  padding: 20px;
+}
+/* ... (其他 CSS 與上一版相同) ... */
+#draw-container {
+  flex-basis: 70%;
+  display: flex;
+  flex-direction: column;
+  padding-right: 20px;
+  border-right: 1px solid rgba(255,255,255,0.2);
+}
+#canvas {
+  background: #fff;
+  border-radius: 8px;
+  cursor: crosshair;
+  touch-action: none;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 10px 0;
+}
+.toolbar input[type="color"] {
+  width: 40px; height: 40px; border: none; padding: 0;
+  background: none; cursor: pointer; margin: 0 10px;
+}
+.toolbar input[type="range"] { margin: 0 10px; }
+.toolbar button {
+  font-size: 1em; padding: 10px 12px; margin: 6px; border-radius: 8px;
+  border: none; background: rgba(255,255,255,0.1); color: #fff;
+}
+.toolbar button:hover { background: rgba(255,255,255,0.25); cursor: pointer; }
+#chat-container {
+  flex-basis: 30%;
+  display: flex;
+  flex-direction: column;
+  padding-left: 20px;
+}
+#word-display {
+  font-size: 1.5em;
+  font-weight: bold;
+  text-align: center;
+  padding: 15px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+  min-height: 1.5em;
+  letter-spacing: 0.1em;
+}
+#messages {
+  flex-grow: 1;
+  overflow-y: auto;
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+.message { margin-bottom: 8px; line-height: 1.4; }
+.message .avatar {
+  font-size: 1.2em;
+  width: 28px;
+  display: inline-block;
+  text-align: center;
+}
+.message .avatar img { width: 28px; height: 28px; border-radius: 50%; vertical-align: middle; }
+.message .nick { font-weight: bold; opacity: 0.8; margin: 0 5px; }
+.message.system { color: #87CEFA; font-style: italic; }
+#guess-input {
+  display: flex;
+  width: 100%;
+}
+#guess-input input {
+  flex-grow: 1;
+  font-size: 1em; padding: 10px 12px; margin: 0; border-radius: 8px 0 0 8px;
+  border: none; background: rgba(0,0,0,0.2); color: #fff;
+}
+#guess-input button {
+  font-size: 1em; padding: 10px 12px; margin: 0; border-radius: 0 8px 8px 0;
+  border: none; background: rgba(135, 206, 250, 0.3); color: #fff;
+}
+#guess-input button:hover { background: rgba(135, 206, 250, 0.5); cursor: pointer; }
+</style>
+</head>
+<body>
+
+<canvas id="galaxy"></canvas>
+
+<div class="container">
+  <div id="draw-container">
+    <canvas id="canvas"></canvas>
+    <div class="toolbar">
+      <button onclick="location.href='index.html'">返回大廳</button>
+      <input type="color" id="color-picker" value="#000000">
+      <label>筆刷大小:</label>
+      <input type="range" id="line-width" min="1" max="20" value="3">
+      <button id="clear-btn">清空畫布</button>
+      <span style="margin-left: auto; font-style: italic;">
+        提示：繪圖者請輸入 <b>/setword 你的題目</b>
+      </span>
+    </div>
+  </div>
+  <div id="chat-container">
+    <div id="word-display">等待繪圖者...</div>
+    <ul id="messages"></ul>
+    <div id="guess-input">
+      <input type="text" id="guess-text" placeholder="猜答案或聊天...">
+      <button id="guess-btn">送出</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ✨ (功能 2) 加入動態星空 JS
+const canvasGalaxy = document.getElementById('galaxy'); // 避免與畫圖 canvas 衝突
+const ctxGalaxy = canvasGalaxy.getContext('2d');
+canvasGalaxy.width = window.innerWidth;
+canvasGalaxy.height = window.innerHeight;
+let stars = [];
+for (let i = 0; i < 800; i++) {
+  stars.push({ x: Math.random(), y: Math.random(), z: Math.random() });
+}
+function drawGalaxy() {
+  ctxGalaxy.fillStyle = '#0a0a1a';
+  ctxGalaxy.fillRect(0, 0, canvasGalaxy.width, canvasGalaxy.height);
+  ctxGalaxy.save();
+  ctxGalaxy.translate(canvasGalaxy.width / 2, canvasGalaxy.height / 2);
+  let time = Date.now() * 0.0001;
+  stars.forEach(star => {
+    let x = (star.x - 0.5) * canvasGalaxy.width * (2 - star.z) + Math.sin(time + star.z) * 100 * star.z;
+    let y = (star.y - 0.5) * canvasGalaxy.height * (2 - star.z) + Math.cos(time + star.x) * 100 * star.z;
+    let r = (1 - star.z) * 1.5;
+    let a = (1 - star.z);
+    ctxGalaxy.fillStyle = `rgba(255, 255, 255, ${a})`;
+    ctxGalaxy.beginPath(); ctxGalaxy.arc(x, y, r, 0, 2 * Math.PI); ctxGalaxy.fill();
+  });
+  ctxGalaxy.restore();
+  requestAnimationFrame(drawGalaxy);
+}
+drawGalaxy();
+window.onresize = () => { 
+  canvasGalaxy.width = window.innerWidth; 
+  canvasGalaxy.height = window.innerHeight;
+  resizeCanvas(); // 也重設畫圖 canvas
+};
+
+
+// (其他 JS 與上一版相同)
+let ws;
+let myNickname = '';
+let myAvatar = '';
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const colorPicker = document.getElementById('color-picker');
+const lineWidth = document.getElementById('line-width');
+const clearBtn = document.getElementById('clear-btn');
+const messagesEl = document.getElementById('messages');
+const guessText = document.getElementById('guess-text');
+const guessBtn = document.getElementById('guess-btn');
+const wordDisplay = document.getElementById('word-display');
+const drawContainer = document.getElementById('draw-container');
+let isDrawing = false;
+let canDraw = false;
+
+window.onload = () => {
+  myNickname = localStorage.getItem("chatUser");
+  myAvatar = localStorage.getItem("chatAvatar");
+  if (!myNickname || !myAvatar) {
+    alert("請先登入聊天室！");
+    location.href = 'index.html';
+    return;
+  }
+  resizeCanvas();
+  // window.addEventListener('resize', resizeCanvas); // (已被上面的 onresize 覆蓋)
+  canvas.addEventListener('mousedown', startDrawing);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', stopDrawing);
+  canvas.addEventListener('mouseout', stopDrawing);
+  canvas.addEventListener('touchstart', startDrawing);
+  canvas.addEventListener('touchmove', draw);
+  canvas.addEventListener('touchend', stopDrawing);
+  clearBtn.onclick = () => {
+    if (canDraw) {
+      ws.send(JSON.stringify({ type: 'clear_canvas', room: '_draw_game_' }));
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  };
+  guessBtn.onclick = sendGuess;
+  guessText.onkeydown = e => { if (e.key === 'Enter') sendGuess(); };
+  disableDrawing();
+  initWS();
+};
+
+function resizeCanvas() {
+    canvas.width = drawContainer.clientWidth;
+    canvas.height = drawContainer.clientHeight - 80;
+}
+
+function initWS() {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${window.location.host}/ws`);
+  ws.onopen = () => {
+    console.log('Draw game connected to WS');
+    ws.send(JSON.stringify({
+      type: 'switch', room: '_draw_game_', nickname: myNickname, avatar: myAvatar
+    }));
+  };
+  ws.onmessage = event => {
+    const msg = JSON.parse(event.data);
+    switch (msg.type) {
+      case 'draw_start':
+      case 'draw_move':
+      case 'draw_end':
+        drawOnCanvas(msg);
+        break;
+      case 'clear_canvas':
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        break;
+      case 'chat':
+        addChatMessage(msg);
+        break;
+      case 'guess_correct':
+        addSystemMessage(`🎉 ${msg.nickname} 猜對了！答案是：${msg.content}`);
+        wordDisplay.textContent = "等待繪圖者...";
+        disableDrawing();
+        break;
+      case 'new_round_drawer':
+        wordDisplay.textContent = `你的題目是：${msg.content}`;
+        addSystemMessage("你是繪圖者！請開始作畫。");
+        enableDrawing();
+        break;
+      case 'new_round_guesser':
+        wordDisplay.textContent = `題目：${msg.content}`;
+        addSystemMessage(`${msg.nickname} 正在作畫...`);
+        disableDrawing();
+        break;
+    }
+  };
+  ws.onclose = () => { addSystemMessage('已與伺服器斷線'); };
+  ws.onerror = err => { console.error('Draw WS Error:', err); };
+}
+
+function getMousePos(evt) {
+    const rect = canvas.getBoundingClientRect();
+    if (evt.touches) {
+        return {
+            x: evt.touches[0].clientX - rect.left,
+            y: evt.touches[0].clientY - rect.top
+        };
+    }
+    return {
+        x: evt.clientX - rect.left,
+        y: evt.clientY - rect.top
+    };
+}
+
+function startDrawing(e) {
+  if (!canDraw || e.button !== 0 && !e.touches) return;
+  e.preventDefault();
+  isDrawing = true;
+  const { x, y } = getMousePos(e);
+  const msg = {
+    type: 'draw_start', room: '_draw_game_',
+    x: x / canvas.width,
+    y: y / canvas.height,
+    color: colorPicker.value,
+    lineWidth: lineWidth.value
+  };
+  ws.send(JSON.stringify(msg));
+  drawOnCanvas(msg);
+}
+
+function draw(e) {
+  if (!isDrawing || !canDraw) return;
+  e.preventDefault();
+  const { x, y } = getMousePos(e);
+  const msg = {
+    type: 'draw_move', room: '_draw_game_',
+    x: x / canvas.width,
+    y: y / canvas.height
+  };
+  ws.send(JSON.stringify(msg));
+  drawOnCanvas(msg);
+}
+
+function stopDrawing() {
+  if (!isDrawing) return;
+  isDrawing = false;
+  const msg = { type: 'draw_end', room: '_draw_game_' };
+  ws.send(JSON.stringify(msg));
+  drawOnCanvas(msg);
+}
+
+function drawOnCanvas(msg) {
+  const x = msg.x * canvas.width;
+  const y = msg.y * canvas.height;
+  switch (msg.type) {
+    case 'draw_start':
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.strokeStyle = msg.color;
+      ctx.lineWidth = msg.lineWidth;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      break;
+    case 'draw_move':
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      break;
+    case 'draw_end':
+      ctx.stroke();
+      ctx.beginPath();
+      break;
+  }
+}
+
+function enableDrawing() {
+  canDraw = true;
+  canvas.style.cursor = 'crosshair';
+  clearBtn.disabled = false;
+}
+
+function disableDrawing() {
+  canDraw = false;
+  canvas.style.cursor = 'not-allowed';
+  clearBtn.disabled = true;
+}
+
+function sendGuess() {
+  const content = guessText.value.trim();
+  if (!content) return;
+  ws.send(JSON.stringify({
+    type: 'chat',
+    room: '_draw_game_',
+    nickname: myNickname,
+    avatar: myAvatar,
+    content: content
+  }));
+  guessText.value = '';
+}
+
+function addChatMessage(msg) {
+  const li = document.createElement('li');
+  li.className = 'message';
+  let avatarEl = '';
+  if (msg.avatar.startsWith('data:')) {
+    avatarEl = `<span class="avatar"><img src="${msg.avatar}"></span>`;
+  } else {
+    avatarEl = `<span class="avatar">${msg.avatar}</span>`;
+  }
+  li.innerHTML = `${avatarEl}<span class="nick">${msg.nickname}:</span> ${msg.content}`;
+  messagesEl.appendChild(li);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function addSystemMessage(text) {
+  const li = document.createElement('li');
+  li.className = 'message system';
+  li.textContent = text;
+  messagesEl.appendChild(li);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+</script>
+</body>
+</html>

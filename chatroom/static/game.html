@@ -3,88 +3,351 @@
 <head>
 <meta charset="UTF-8">
 <title>猜數字競技版</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;700&display=swap" rel="stylesheet">
 <style>
-body {
-  font-family: Arial;
+/* ✨ (功能 2) 改回 Canvas 星空 */
+html, body { 
+  margin: 0; padding: 0; height: 100%; font-family: 'Nunito', 'Segoe UI', sans-serif; 
+  color: #e0f7fa; display: flex; justify-content: center; align-items: center;
+  background-color: #0a0a1a; /* 深色底色 */
+  overflow: hidden;
+}
+canvas#galaxy { position: fixed; top: 0; left: 0; z-index: -1; } /* 星空畫布 */
+
+.container { 
+  background: rgba(10, 10, 20, 0.7); 
+  backdrop-filter: blur(10px); 
+  border-radius: 12px; 
+  padding: 32px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4); 
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 90%; 
+  max-width: 800px; 
+  color: #fff; 
+  z-index: 1;
   text-align: center;
-  margin-top: 40px;
 }
-input, button {
+
+/* (所有其他精緻化 CSS 與上一版相同) */
+.game-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+}
+.game-panel {
+  flex: 1;
+  min-width: 300px;
+  text-align: left;
+}
+.info-panel {
+  flex: 1;
+  min-width: 300px;
+  text-align: left;
+}
+.game-panel h2 { 
+  font-size: 2.5em; 
+  font-weight: 300; 
+  letter-spacing: 1px; 
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #87CEFA;
+}
+.game-panel p { 
+  font-size: 1.1em; 
+  opacity: 0.9; 
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+.game-box {
+  margin: 20px 0;
+  display: flex;
+  gap: 10px;
+}
+input[type="number"] {
+  font-family: 'Nunito', 'Segoe UI', sans-serif;
+  font-size: 1.5em;
+  padding: 12px 15px; 
+  margin: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  flex-grow: 1;
+  text-align: center;
+}
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; margin: 0; 
+}
+input[type=number] { -moz-appearance: textfield; }
+button {
+  font-family: 'Nunito', 'Segoe UI', sans-serif;
   font-size: 1.2em;
-  padding: 8px;
-  margin: 10px;
+  padding: 12px 20px;
+  margin: 0;
+  border-radius: 8px;
+  border: none;
+  background: rgba(135, 206, 250, 0.4);
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
 }
+button:hover { 
+  background: rgba(135, 206, 250, 0.6);
+  transform: translateY(-2px);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+button.reset-btn { 
+  background: rgba(255,255,255,0.1); 
+  width: 100%;
+  margin-top: 10px;
+}
+button.reset-btn:hover { background: rgba(255,255,255,0.2); transform: none; }
+#feedback {
+  font-size: 2em;
+  font-weight: bold;
+  margin: 20px 0;
+  min-height: 1.3em;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.3s ease;
+}
+#feedback.show { opacity: 1; transform: scale(1); }
+#feedback.low { color: #87CEFA; }
+#feedback.high { color: #FF8A8A; }
 #result {
-  font-size: 1.3em;
-  margin-top: 20px;
+  font-size: 1.3em; margin-top: 20px; min-height: 1.3em;
+  font-weight: bold; color: #4CAF50;
 }
+.info-panel h3 {
+  margin-top: 0;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+#guess-history {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px 0;
+  height: 200px;
+  overflow-y: auto;
+  background: rgba(0,0,0,0.2);
+  border-radius: 8px;
+}
+#guess-history li {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  font-size: 1.1em;
+  font-weight: bold;
+}
+#guess-history li span {
+  font-weight: 300;
+  opacity: 0.8;
+  margin-left: 10px;
+}
+#guess-history li.low span { color: #87CEFA; }
+#guess-history li.high span { color: #FF8A8A; }
 table {
-  margin: 20px auto;
-  border-collapse: collapse;
+  margin: 0; border-collapse: collapse; width: 100%;
 }
 th, td {
-  border: 1px solid #ccc;
-  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3); padding: 8px 12px;
+  font-size: 0.9em;
+}
+th { background: rgba(255, 255, 255, 0.1); }
+.avatar-cell { font-size: 1.2em; padding: 4px; text-align: center; }
+.avatar-cell img { 
+  width:24px; height:24px; border-radius:50%; 
+  object-fit: cover; vertical-align: middle; 
 }
 </style>
 </head>
 <body>
-<h2>🎮 猜數字競技版</h2>
-<p>我已選好一個 1 到 100 的數字，來挑戰吧！</p>
-<p>⏱️ 時間：<span id="timer">0</span> 秒</p>
-<input id="guess" type="number" placeholder="輸入你的猜測">
-<button onclick="checkGuess()">猜！</button>
-<p id="result"></p>
-<button onclick="resetGame()">重新開始</button>
-<br><br>
-<button onclick="location.href='index.html'">返回聊天室</button>
 
-<h3>🏆 排行榜</h3>
-<table>
-  <thead>
-    <tr><th>暱稱</th><th>次數</th><th>時間 (秒)</th></tr>
-  </thead>
-  <tbody id="leaderboard"></tbody>
-</table>
+<canvas id="galaxy"></canvas>
+
+<div class="container">
+  
+  <div class="game-layout">
+    
+    <div class="game-panel">
+      <h2>🎮 猜數字競技版</h2>
+      <p>
+        我已選好一個 1 到 100 的數字。
+        <br>⏱️ 時間：<span id="timer">0</span> 秒 | 
+        <span id="attempts-text">猜測：0 次</span>
+      </p>
+      <div id="feedback"></div>
+      <div class="game-box" id="game-box">
+        <input id="guess" type="number" placeholder="輸入猜測" onkeydown="if(event.key==='Enter') checkGuess();">
+        <button id="guess-btn" onclick="checkGuess()">猜！</button>
+      </div>
+      <p id="result"></p>
+      <button onclick="resetGame()" class="reset-btn">重新開始</button>
+      <button onclick="location.href='index.html'" class="reset-btn">返回聊天室</button>
+    </div>
+
+    <div class="info-panel">
+      <h3>猜測紀錄</h3>
+      <ul id="guess-history">
+      </ul>
+      <h3>🏆 全域排行榜</h3>
+      <div style="height: 200px; overflow-y: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>頭像</th>
+              <th>暱稱</th>
+              <th>次數</th>
+              <th>時間</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-body">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div> 
+</div>
 
 <script>
+// ✨ (功能 2) 加入動態星空 JS
+const canvas = document.getElementById('galaxy');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+let stars = [];
+for (let i = 0; i < 800; i++) {
+  stars.push({ x: Math.random(), y: Math.random(), z: Math.random() });
+}
+function drawGalaxy() {
+  ctx.fillStyle = '#0a0a1a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  let time = Date.now() * 0.0001;
+  stars.forEach(star => {
+    let x = (star.x - 0.5) * canvas.width * (2 - star.z) + Math.sin(time + star.z) * 100 * star.z;
+    let y = (star.y - 0.5) * canvas.height * (2 - star.z) + Math.cos(time + star.x) * 100 * star.z;
+    let r = (1 - star.z) * 1.5;
+    let a = (1 - star.z);
+    ctx.fillStyle = `rgba(255, 255, 255, ${a})`;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill();
+  });
+  ctx.restore();
+  requestAnimationFrame(drawGalaxy);
+}
+drawGalaxy();
+window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+
+// (所有遊戲邏輯 JS 與上一版相同)
+let ws;
+let myNickname = '';
+let myAvatar = '';
 let answer = Math.floor(Math.random() * 100) + 1;
 let attempts = 0;
 let startTime = Date.now();
-let timerInterval = setInterval(updateTimer, 1000);
 let finished = false;
+let timerInterval = setInterval(updateTimer, 1000);
+const guessInput = document.getElementById("guess");
+const guessBtn = document.getElementById("guess-btn");
+const resultEl = document.getElementById("result");
+const feedbackEl = document.getElementById("feedback");
+const gameBox = document.getElementById("game-box");
+const historyList = document.getElementById("guess-history");
+const attemptsText = document.getElementById("attempts-text");
+
+window.onload = () => {
+  myNickname = localStorage.getItem("chatUser");
+  myAvatar = localStorage.getItem("chatAvatar");
+  if (!myNickname || !myAvatar) {
+    alert("請先登入聊天室！");
+    location.href = 'index.html';
+    return;
+  }
+  initWS();
+};
+
+function initWS() {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${window.location.host}/ws`);
+  ws.onopen = () => {
+    console.log('Game connected to WS');
+    ws.send(JSON.stringify({
+      type: 'switch', room: '_game_', nickname: myNickname, avatar: myAvatar
+    }));
+    ws.send(JSON.stringify({ type: 'get_leaderboard' }));
+  };
+  ws.onmessage = event => {
+    const msg = JSON.parse(event.data);
+    if (msg.type === 'leaderboard_update') {
+      const scores = JSON.parse(msg.content);
+      renderLeaderboard(scores);
+    }
+  };
+  ws.onclose = () => { console.log('Game disconnected'); };
+  ws.onerror = err => { console.error('Game WS Error:', err); };
+}
 
 function updateTimer() {
-  if (!finished) {
-    const elapsed = Math.floor((Date.now() - startTime) / 1000);
-    document.getElementById("timer").textContent = elapsed;
-  }
+  if (finished) return;
+  document.getElementById("timer").textContent = Math.floor((Date.now() - startTime) / 1000);
 }
 
 function checkGuess() {
-  const guess = parseInt(document.getElementById("guess").value);
+  if (finished) return;
+  
+  const guess = parseInt(guessInput.value);
   if (isNaN(guess) || guess < 1 || guess > 100) {
-    document.getElementById("result").textContent = "請輸入 1 到 100 的整數！";
+    feedbackEl.textContent = "請輸入 1-100";
+    feedbackEl.className = 'show high';
     return;
   }
+
   attempts++;
-  if (guess < answer) {
-    document.getElementById("result").textContent = `太小了！目前猜了 ${attempts} 次`;
-  } else if (guess > answer) {
-    document.getElementById("result").textContent = `太大了！目前猜了 ${attempts} 次`;
-  } else {
-    finished = true;
-    clearInterval(timerInterval);
-    const timeUsed = Math.floor((Date.now() - startTime) / 1000);
-    document.getElementById("result").textContent = `🎉 恭喜你猜對了！總共猜了 ${attempts} 次，用了 ${timeUsed} 秒`;
-    setTimeout(() => {
-      const name = prompt("請輸入暱稱以加入排行榜：");
-      if (name) {
-        saveScore(name, attempts, timeUsed);
-        renderLeaderboard();
-      }
-    }, 500);
-  }
+  attemptsText.textContent = `猜測：${attempts} 次`;
+  feedbackEl.classList.remove('show');
+  
+  const li = document.createElement("li");
+  
+  setTimeout(() => {
+    if (guess < answer) {
+      feedbackEl.textContent = `太低了！`;
+      feedbackEl.className = 'show low';
+      li.className = 'low';
+      li.innerHTML = `${guess} <span>(太低了)</span>`;
+    } else if (guess > answer) {
+      feedbackEl.textContent = `太高了！`;
+      feedbackEl.className = 'show high';
+      li.className = 'high';
+      li.innerHTML = `${guess} <span>(太高了)</span>`;
+    } else {
+      finished = true;
+      clearInterval(timerInterval);
+      const timeUsed = Math.floor((Date.now() - startTime) / 1000);
+      
+      feedbackEl.classList.remove('show');
+      gameBox.style.display = 'none';
+      resultEl.textContent = `🎉 恭喜！答案就是 ${answer}！你用了 ${attempts} 次，${timeUsed} 秒`;
+      
+      li.className = 'correct';
+      li.innerHTML = `${guess} <span>(🎉 答對了！)</span>`;
+      
+      ws.send(JSON.stringify({
+        type: 'game_score', tries: attempts, time: timeUsed
+      }));
+    }
+    historyList.appendChild(li);
+    historyList.scrollTop = historyList.scrollHeight;
+  }, 10);
+  
+  guessInput.value = "";
 }
 
 function resetGame() {
@@ -92,32 +355,44 @@ function resetGame() {
   attempts = 0;
   startTime = Date.now();
   finished = false;
-  document.getElementById("guess").value = "";
-  document.getElementById("result").textContent = "";
+  
+  guessInput.value = "";
+  resultEl.textContent = "";
+  feedbackEl.textContent = "";
+  feedbackEl.classList.remove('show');
+  gameBox.style.display = 'flex';
+  historyList.innerHTML = "";
+  attemptsText.textContent = `猜測：0 次`;
+  
   document.getElementById("timer").textContent = "0";
   clearInterval(timerInterval);
   timerInterval = setInterval(updateTimer, 1000);
 }
 
-function saveScore(name, tries, time) {
-  const scores = JSON.parse(localStorage.getItem("leaderboard") || "[]");
-  scores.push({ name, tries, time });
-  scores.sort((a, b) => a.tries - b.tries || a.time - b.time);
-  localStorage.setItem("leaderboard", JSON.stringify(scores.slice(0, 10)));
-}
-
-function renderLeaderboard() {
-  const scores = JSON.parse(localStorage.getItem("leaderboard") || "[]");
-  const tbody = document.getElementById("leaderboard");
-  tbody.innerHTML = "";
-  scores.forEach(score => {
-    const row = document.createElement("tr");
-    row.innerHTML = `<td>${score.name}</td><td>${score.tries}</td><td>${score.time}</td>`;
-    tbody.appendChild(row);
+function renderLeaderboard(scores) {
+  const board = document.getElementById("leaderboard-body");
+  board.innerHTML = "";
+  if (!scores || scores.length === 0) {
+    board.innerHTML = '<tr><td colspan="5">目前還沒有紀錄</td></tr>';
+    return;
+  }
+  scores.forEach((score, index) => {
+    const row = board.insertRow();
+    let avatarContent = '';
+    if (score.avatar.startsWith('data:')) {
+      avatarContent = `<img src="${score.avatar}">`;
+    } else {
+      avatarContent = score.avatar;
+    }
+    row.innerHTML = `
+      <td>#${index + 1}</td>
+      <td class="avatar-cell">${avatarContent}</td>
+      <td>${score.nickname}</td>
+      <td>${score.tries}</td>
+      <td>${score.time}s</td>
+    `;
   });
 }
-
-renderLeaderboard();
 </script>
 </body>
 </html>

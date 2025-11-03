@@ -2,587 +2,764 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>星空聊天室 — 互動強化版</title>
+<title>GO GO GO Chatroom</title>
 <style>
+/* (星空背景 CSS) */
 html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: #e0f7fa; }
-body { display: flex; justify-content: center; align-items: center; }
+body { 
+  display: flex; justify-content: center; align-items: center; 
+  background-color: #0a0a1a;
+}
 canvas#galaxy { position: fixed; top: 0; left: 0; z-index: -1; }
 .container { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border-radius: 12px; padding: 24px; box-shadow: 0 0 20px rgba(255,255,255,0.1); width: 92%; max-width: 1280px; color: #fff; z-index: 1; }
 h2, h3 { margin: 8px 0 12px; }
-input, button, textarea { font-size: 1em; padding: 10px 12px; margin: 6px; border-radius: 8px; border: none; background: rgba(255,255,255,0.1); color: #fff; }
-button:hover { background: rgba(255,255,255,0.25); cursor: pointer; }
-.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-#messages { list-style: none; padding: 10px; margin: 12px 0; height: 320px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; background: rgba(255,255,255,0.06); }
-.message { position: relative; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
-.avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
-.msg-body { flex: 1; }
-.msg-header { font-weight: 600; opacity: 0.9; margin-bottom: 4px; }
-.msg-content { white-space: pre-wrap; word-break: break-word; }
-.msg-media { max-width: 220px; max-height: 180px; border-radius: 8px; display: block; margin-top: 6px; cursor: zoom-in; }
-.reaction-bar { display: flex; gap: 6px; margin-top: 6px; opacity: 0.8; }
-.reaction-btn { background: rgba(255,255,255,0.12); border-radius: 14px; padding: 4px 8px; font-size: 0.95em; }
-.reaction-float { position: absolute; animation: floatUp 1.4s ease-out forwards; pointer-events: none; font-size: 20px; }
-@keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-36px); opacity: 0; } }
-.bullet { position: fixed; white-space: nowrap; animation: move 10s linear; font-weight: bold; font-size: 1.3em; color: #ffffff; text-shadow: 0 0 5px #00bcd4; }
-@keyframes move { from { right: -300px; } to { right: 100%; } }
-.tools { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 4px 0 10px; }
-.tools .row { gap: 10px; }
-.tool-box { border: 1px dashed rgba(0,200,255,0.4); border-radius: 10px; padding: 10px; background: rgba(0,0,0,0.2); }
-#dropzone { border: 2px dashed rgba(0,200,255,0.6); border-radius: 12px; padding: 14px; text-align: center; color: #aee; transition: 0.2s; }
-#dropzone.dragover { background: rgba(0,200,255,0.08); box-shadow: 0 0 10px rgba(0,200,255,0.4) inset; }
-.quiz-info { margin-left: 8px; color: #a8e; font-weight: 600; }
-audio { margin-top: 6px; width: 220px; }
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: none; align-items: center; justify-content: center; z-index: 2; }
-.modal img { max-width: 90vw; max-height: 90vh; border-radius: 10px; }
-.footer-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-.small { font-size: 0.9em; opacity: 0.8; }
+input, button, textarea, label.button { font-size: 1em; padding: 10px 12px; margin: 6px; border-radius: 8px; border: none; background: rgba(255,255,255,0.1); color: #fff; }
+button:hover, label.button:hover { background: rgba(255,255,255,0.25); cursor: pointer; }
+input[type="text"] { width: 95%; } /* ✨ (功能 1) Modal input 寬度 */
+
+/* ... (其他 CSS 與 Response 11 相同) ... */
+.row { display: flex; align-items: center; }
+.col { display: flex; flex-direction: column; }
+#chat-window { display: none; height: 70vh; }
+#chat-content { display: flex; height: 100%; }
+#sidebar { width: 200px; padding-right: 20px; border-right: 1px solid rgba(255,255,255,0.2); overflow-y: auto; }
+#room-list { list-style: none; padding: 0; }
+#room-list li { padding: 10px; margin-bottom: 5px; border-radius: 6px; cursor: pointer; }
+#room-list li:hover { background: rgba(255,255,255,0.1); }
+#room-list li.active { background: rgba(135, 206, 250, 0.4); }
+#main-chat { flex-grow: 1; display: flex; flex-direction: column; padding-left: 20px; }
+#messages { flex-grow: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
+.message { display: flex; margin-bottom: 12px; align-items: flex-start; }
+.msg-avatar { width: 40px; height: 40px; border-radius: 50%; margin-right: 10px; object-fit: cover; }
+.msg-body { max-width: 70%; display: flex; flex-direction: column; position: relative; }
+.msg-header { font-size: 0.9em; font-weight: bold; margin-bottom: 4px; opacity: 0.8; }
+.msg-content { padding: 10px 14px; background: rgba(0, 0, 0, 0.2); border-radius: 0 12px 12px 12px; line-height: 1.5; word-wrap: break-word; }
+.message.system .msg-body { max-width: 100%; align-items: center; }
+.message.system .msg-content { background: rgba(135, 206, 250, 0.2); border-radius: 8px; font-style: italic; }
+#chat-controls { display: flex; margin-top: 10px; }
+#chat-controls input { flex-grow: 1; }
+#chat-controls button { background: rgba(135, 206, 250, 0.3); }
+#chat-controls button:hover { background: rgba(135, 206, 250, 0.5); }
+#login-window { text-align: center; }
+#avatar-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 20px; justify-items: center; }
+.avatar-select { width: 50px; height: 50px; line-height: 50px; font-size: 28px; text-align: center; border-radius: 50%; cursor: pointer; opacity: 0.6; transition: all 0.2s; }
+.avatar-select:hover { opacity: 1; transform: scale(1.1); }
+.avatar-select.selected { opacity: 1; transform: scale(1.1); box-shadow: 0 0 10px 2px #87CEFA; }
+.toolbar { display: flex; flex-wrap: wrap; margin-bottom: 10px; }
+.toolbar button, .toolbar label { margin: 4px; padding: 8px 10px; font-size: 0.9em; display: flex; align-items: center; }
+#imageInput { display: none; }
+#voiceInput { display: none; }
+#rec-status { width: 12px; height: 12px; background: #666; border-radius: 50%; margin-left: 8px; }
+#rec-status.rec { background: red; animation: pulse 1s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255,0,0, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(255,0,0, 0); } 100% { box-shadow: 0 0 0 0 rgba(255,0,0, 0); } }
+.msg-vote { padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.1); }
+.vote-option { display: block; margin: 8px 0; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 6px; cursor: pointer; }
+.vote-option:hover { background: rgba(255,255,255,0.2); }
+.vote-result { margin-top: 10px; font-size: 0.9em; }
+.msg-quiz { padding: 10px; border-radius: 8px; background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.5); }
+.msg-quiz.answered { background: rgba(0, 255, 0, 0.1); border-color: rgba(0, 255, 0, 0.5); }
+.quiz-input { display: flex; margin-top: 8px; }
+.quiz-input input { flex-grow: 1; }
+.quiz-input button { background: rgba(255, 215, 0, 0.3); }
+.reaction-float { position: absolute; font-size: 2em; animation: floatUp 1.4s ease-out; opacity: 0; }
+@keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-40px) scale(1.5); opacity: 0; } }
+.msg-reactions { margin-top: 5px; }
+.msg-reactions button { font-size: 0.8em; padding: 2px 6px; margin: 2px; background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 10px; color: #fff; cursor: pointer; }
+.msg-reactions button:hover { background: rgba(255, 255, 255, 0.4); }
+.msg-emoji-picker { display: none; position: absolute; top: -20px; right: 10px; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); border-radius: 15px; padding: 2px 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+.message:hover .msg-emoji-picker { display: block; }
+.msg-emoji-picker button { font-size: 1.1em; padding: 0 4px; margin: 0; background: none; border: none; color: #fff; cursor: pointer; transition: transform 0.1s; }
+.msg-emoji-picker button:hover { transform: scale(1.3); }
+#online-status {
+  text-align: center; font-weight: bold; margin: 15px 0 10px 0; padding: 10px;
+  background: rgba(0, 255, 127, 0.1); border-radius: 8px;
+  border: 1px solid rgba(0, 255, 127, 0.3); font-size: 0.9em;
+}
+#login-window h2 { font-size: 2.2em; font-weight: 300; letter-spacing: 1px; margin-bottom: 5px; }
+#login-window p { font-size: 1.1em; opacity: 0.8; margin-bottom: 20px; }
+#avatar-grid { max-width: 400px; margin: 20px auto; }
+.avatar-select { width: 60px; height: 60px; line-height: 60px; font-size: 32px; }
+#login-window #avatar-preview { width: 80px; height: 80px; margin-bottom: 15px; }
+#login-window input[type="text"] { width: 250px; text-align: center; font-size: 1.1em; }
+#login-window button { font-size: 1.1em; background: rgba(135, 206, 250, 0.4); font-weight: bold; color: #fff;}
+#login-window button:hover { background: rgba(135, 206, 250, 0.6); }
+.attachment-preview {
+  display: none; align-items: center; margin: 0 10px; 
+  background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 8px;
+}
+.attachment-preview button {
+  background:none; border:none; color:red; font-size: 1.5em; 
+  padding: 0 5px; cursor: pointer; margin: 0;
+}
+
+/* ✨ (功能 1) Modal CSS */
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(5px);
+  z-index: 10;
+}
+.modal {
+  display: none;
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(30, 30, 50, 0.8);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+  padding: 24px;
+  width: 90%;
+  max-width: 500px;
+  z-index: 11;
+}
+.modal h4 { margin-top: 0; font-size: 1.4em; }
+.modal-close-btn {
+  position: absolute;
+  top: 10px; right: 15px;
+  font-size: 1.5em;
+  color: #fff;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.modal label {
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
 </style>
 </head>
 <body>
+
 <canvas id="galaxy"></canvas>
 
-<div class="container">
-  <h2>🌌 星空聊天室</h2>
+<div class="container" id="login-window">
+  <h2>GO GO GO 聊天室</h2>
+  <p>請選擇你的頭像和暱稱</p>
+  <div id="avatar-grid"></div>
+  <div style="margin: 10px 0;">
+    <img id="avatar-preview" src="" style="width: 80px; height: 80px; border-radius: 50%; display: none; margin: 0 auto 15px; border: 2px solid #87CEFA; object-fit: cover;">
+    <label for="avatarUpload" class="button" style="cursor: pointer; padding: 10px 12px; display: inline-block;">
+      🖼️ 上傳自訂頭貼
+    </label>
+    <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
+  </div>
+  <div class="row" style="justify-content: center;">
+    <input type="text" id="nicknameInput" placeholder="輸入暱稱...">
+    <button onclick="login()">🚀 進入</button>
+  </div>
+</div>
 
-  <div id="login">
-    <div class="row">
-      <span>暱稱：</span><input id="nickname" placeholder="輸入暱稱">
-      <span>房間：</span><input id="room" value="default">
-    </div>
-    <div class="row">
-      <span>頭貼：</span><input type="file" id="upload" accept="image/*">
-      <button onclick="joinChat()">加入聊天室</button>
-      <button onclick="location.href='game.html'">🎮 小遊戲：猜數字</button>
+<div class="container" id="chat-window">
+  <div class="row" style="justify-content: space-between; margin-bottom: 10px;">
+    <h3>💬 聊天室</h3>
+    <div>
+      <button onclick="location.href='game.html'">🎮 猜數字</button>
+      <button onclick="location.href='draw.html'">🎨 你畫我猜</button>
     </div>
   </div>
-
-  <div id="chat" style="display:none;">
-    <div style="display: flex; gap: 16px;">
-      <div id="chat-container" style="flex: 1;">
-        <h3 id="roomTitle"></h3>
-
-        <!-- 工具列：即時搶答、語音、圖片/GIF、拖曳上傳 -->
-        <div class="tools">
-          <div class="tool-box">
-            <div class="row">
-              <strong>即時搶答</strong>
-              <input id="quizQuestion" placeholder="題目（例如：1+1=？）">
-              <input id="quizAnswer" placeholder="答案（例如：2）">
-              <button onclick="startQuiz()">發起題目</button>
-              <span id="quizStatus" class="quiz-info"></span>
-            </div>
-            <div class="row">
-              <input id="quizMyAnswer" placeholder="你的答案">
-              <button onclick="submitQuizAnswer()">搶答</button>
-            </div>
-          </div>
-
-          <div class="tool-box">
-            <div class="row">
-              <strong>語音訊息</strong>
-              <button id="recBtn" onclick="toggleRecord()">開始錄音</button>
-              <span id="sttStatus" class="small"></span>
-            </div>
-          </div>
-
-          <div class="tool-box">
-            <div class="row">
-              <strong>圖片 / GIF 分享</strong>
-              <input type="file" id="imgPicker" accept="image/*" multiple>
-              <button onclick="sendPickedImages()">送出選取檔案</button>
-            </div>
-            <div id="dropzone">將圖片或 GIF 拖曳到此處上傳</div>
-          </div>
-        </div>
-
-        <ul id="messages"></ul>
-
-        <div id="typing-indicator" class="small" style="height: 20px; padding-left: 10px;"></div>
-
-        <!-- 輸入列 + 反應預覽 -->
-        <div class="footer-row">
-          <div class="row" style="flex: 1 1 420px;">
-            <input id="msg" placeholder="輸入訊息並送出（輸入 '流星' 可觸發特效）" style="flex:1;">
-            <button onclick="sendMessage()">送出</button>
-          </div>
-          <div class="row small">提示：點擊訊息下的 👍 😂 ❤️ 🚀 可以送出表情反應</div>
-        </div>
-
-        <div class="row" style="margin-top:10px;">
-          <button onclick="leaveRoom()">退出房間</button>
-          <input id="newRoom" placeholder="新房間">
-          <button onclick="switchRoom()">切換房間</button>
-        </div>
+  <div id="chat-content">
+    <div id="sidebar">
+      <div id="online-status">🟢 在線：<span id="online-count">0</span> 人</div>
+      <h3>房間列表</h3>
+      <ul id="room-list"></ul>
+      <div class="col">
+        <input type="text" id="newRoomInput" placeholder="新房間名稱...">
+        <button onclick="createRoom()">+ 建立房間</button>
       </div>
-
-      <div id="sidebar" style="width: 240px; background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px; height: fit-content;">
-        <h4>🚀 線上使用者</h4>
-        <ul id="user-list" style="list-style: none; padding: 0; margin: 0; color: #e0f7fa;">
-        </ul>
+    </div>
+    <div id="main-chat">
+      <ul id="messages"></ul>
+      <div class="toolbar">
+        <label for="imageInput" class="button" id="image-label">🖼️ 圖片</label>
+        <input type="file" id="imageInput" accept="image/*">
+        <label for="voiceInput" class="button" id="voiceBtn">🎤 語音 (按住)</label>
+        <input type="checkbox" id="voiceInput">
+        <span id="rec-status"></span>
+        <button onclick="showQuizModal()">🧠 出題搶答</button>
+        <button onclick="showVoteModal()">📊 發起投票</button>
+      </div>
+      <div class="row" id="chat-controls">
+        <input type="text" id="messageInput" placeholder="輸入訊息...">
+        <div id="image-preview-container" class="attachment-preview">
+          <img id="image-preview" src="" style="max-height: 40px; border-radius: 4px;">
+          <button id="cancel-image">&times;</button>
+        </div>
+        <div id="audio-preview-container" class="attachment-preview">
+          <span>🎤 語音已附加</span>
+          <button id="cancel-audio">&times;</button>
+        </div>
+        <button onclick="sendMsg()">🚀 送出</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- 圖片放大 Modal -->
-<div id="imgModal" class="modal" onclick="hideModal()">
-  <img id="modalImg" src="">
+<div id="modal-backdrop" onclick="closeModals()"></div>
+
+<div id="quiz-modal" class="modal">
+  <button class="modal-close-btn" onclick="closeModals()">&times;</button>
+  <h4>🧠 建立搶答</h4>
+  <label for="quiz-question">題目：</label>
+  <input type="text" id="quiz-question" placeholder="例如：什麼是世界上最快的動物？">
+  <label for="quiz-answer">答案：</label>
+  <input type="text" id="quiz-answer" placeholder="例如：獵豹">
+  <button onclick="submitQuiz()" style="margin-top: 15px; width: 100%;">發送搶答</button>
+</div>
+
+<div id="vote-modal" class="modal">
+  <button class="modal-close-btn" onclick="closeModals()">&times;</button>
+  <h4>📊 建立投票</h4>
+  <label for="vote-question">問題：</label>
+  <input type="text" id="vote-question" placeholder="例如：晚餐要吃什麼？">
+  <label for="vote-options">選項 (用逗號 , 分隔)：</label>
+  <input type="text" id="vote-options" placeholder="例如：披薩, 漢堡, 義大利麵">
+  <button onclick="submitVote()" style="margin-top: 15px; width: 100%;">發送投票</button>
 </div>
 
 <script>
-// ===== 背景：黑藍星系 + 流星 + 閃爍 + 關鍵字特效 =====
+// (星空 JS 與上一版相同)
 const canvas = document.getElementById('galaxy');
 const ctx = canvas.getContext('2d');
-let width = canvas.width = window.innerWidth;
-let height = canvas.height = window.innerHeight;
-
-const stars = [];
-const STAR_COUNT = 600;
-for (let i = 0; i < STAR_COUNT; i++) {
-  stars.push({
-    x: Math.random() * width - width / 2,
-    y: Math.random() * height - height / 2,
-    z: Math.random() * width,
-    radius: Math.random() * 1.5 + 0.5,
-    baseColor: `hsl(${200 + Math.random() * 40}, 100%, ${70 + Math.random() * 20}%)`,
-    brightness: 1
-  });
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+let stars = [];
+for (let i = 0; i < 800; i++) {
+  stars.push({ x: Math.random(), y: Math.random(), z: Math.random() });
 }
-
-let meteors = [];
-function spawnMeteor() {
-  const startX = Math.random() * width;
-  const startY = Math.random() * height * 0.3;
-  const length = Math.random() * 80 + 50;
-  const speed = Math.random() * 4 + 6;
-  meteors.push({ x: startX, y: startY, length, speed, angle: Math.PI/4, opacity: 1 });
-}
-function spawnSpecialMeteor() {
-  const startX = Math.random() * width;
-  const startY = Math.random() * height * 0.3;
-  const length = Math.random() * 150 + 100;
-  const speed = Math.random() * 6 + 10;
-  meteors.push({ x: startX, y: startY, length, speed, angle: Math.PI/4, opacity: 1.2 });
-}
-setInterval(() => { if (meteors.length < 5) spawnMeteor(); }, Math.random()*2500 + 1500);
-
 function drawGalaxy() {
-  const g = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, width);
-  g.addColorStop(0, 'rgba(10, 20, 40, 0.9)'); g.addColorStop(1, 'rgba(0, 0, 0, 1)');
-  ctx.fillStyle = g; ctx.fillRect(0, 0, width, height);
-
-  for (let star of stars) {
-    star.z -= 2.5;
-    if (star.z <= 0) { star.z = width; star.x = Math.random()*width - width/2; star.y = Math.random()*height - height/2; }
-    const k = 128 / star.z, px = star.x * k + width/2, py = star.y * k + height/2;
-    if (star.brightness > 1) star.brightness -= 0.02;
-    ctx.beginPath(); ctx.arc(px, py, star.radius, 0, Math.PI*2);
-    ctx.fillStyle = star.baseColor; ctx.globalAlpha = star.brightness; ctx.shadowBlur = 10; ctx.shadowColor = star.baseColor; ctx.fill(); ctx.globalAlpha = 1;
-  }
-
-  for (let i = meteors.length - 1; i >= 0; i--) {
-    const m = meteors[i];
-    ctx.strokeStyle = `rgba(173,216,255,${m.opacity})`; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(m.x, m.y);
-    ctx.lineTo(m.x - m.length * Math.cos(m.angle), m.y - m.length * Math.sin(m.angle));
-    ctx.stroke();
-
-    for (let star of stars) {
-      const k = 128 / star.z, px = star.x * k + width/2, py = star.y * k + height/2;
-      if (Math.hypot(px - m.x, py - m.y) < 100) star.brightness = 2;
-    }
-    m.x += m.speed * Math.cos(m.angle);
-    m.y += m.speed * Math.sin(m.angle);
-    m.opacity -= 0.01;
-    if (m.opacity <= 0) meteors.splice(i, 1);
-  }
+  ctx.fillStyle = '#0a0a1a';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  let time = Date.now() * 0.0001;
+  stars.forEach(star => {
+    let x = (star.x - 0.5) * canvas.width * (2 - star.z) + Math.sin(time + star.z) * 100 * star.z;
+    let y = (star.y - 0.5) * canvas.height * (2 - star.z) + Math.cos(time + star.x) * 100 * star.z;
+    let r = (1 - star.z) * 1.5;
+    let a = (1 - star.z);
+    ctx.fillStyle = `rgba(255, 255, 255, ${a})`;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI); ctx.fill();
+  });
+  ctx.restore();
   requestAnimationFrame(drawGalaxy);
 }
 drawGalaxy();
-addEventListener('resize', () => { width = canvas.width = innerWidth; height = canvas.height = innerHeight; });
+window.onresize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
 
-// ===== 基本聊天室變數 =====
-let ws, nickname, room, avatar, customAvatar = "";
-const $ = (id) => document.getElementById(id);
-const messagesEl = $('messages');
-let typingTimer;
-const typingUsers = new Set();
+// (輔助函式與上一版相同)
+function resizeImage(base64Str, maxSize = 96, callback) {
+  const img = new Image();
+  img.src = base64Str;
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = maxSize;
+    canvas.height = maxSize;
+    let sourceSize = Math.min(img.width, img.height);
+    let sourceX = (img.width - sourceSize) / 2;
+    let sourceY = (img.height - sourceSize) / 2;
+    ctx.drawImage(img, sourceX, sourceY, sourceSize, sourceSize, 0, 0, maxSize, maxSize);
+    callback(canvas.toDataURL('image/png'));
+  };
+}
 
-// ===== 鍵盤輸入事件 =====
-$('msg').addEventListener('keydown', () => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    clearTimeout(typingTimer);
-    ws.send(JSON.stringify({ type: 'typing_start', nickname, room }));
+// (DOM 元素與上一版相同)
+const loginWindow = document.getElementById('login-window');
+const chatWindow = document.getElementById('chat-window');
+const nicknameInput = document.getElementById('nicknameInput');
+const avatarGrid = document.getElementById('avatar-grid');
+const messagesEl = document.getElementById('messages');
+const messageInput = document.getElementById('messageInput');
+const roomListEl = document.getElementById('room-list');
+const newRoomInput = document.getElementById('newRoomInput');
+const imageInput = document.getElementById('imageInput');
+const voiceInput = document.getElementById('voiceInput');
+const voiceBtn = document.getElementById('voiceBtn');
+const recStatus = document.getElementById('rec-status');
+
+// ✨ (功能 1) Modal DOM
+const modalBackdrop = document.getElementById('modal-backdrop');
+const quizModal = document.getElementById('quiz-modal');
+const voteModal = document.getElementById('vote-modal');
+
+// (狀態變數與上一版相同)
+let ws;
+let myNickname = '';
+let myAvatar = '';
+let currentRoom = 'lobby';
+let quizAnswer = ''; 
+let mediaRecorder;
+let audioChunks = [];
+let imageToSend = null;
+let audioToSend = null; 
+let audioTranscript = null;
+
+// (頭像邏輯與上一版相同)
+const avatars = ['😀','😎','🚀','🤖','🧠','🎨','🎮','🏆','💡','📊'];
+avatars.forEach(a => {
+  const av = document.createElement('span');
+  av.className = 'avatar-select';
+  av.textContent = a;
+  av.onclick = () => {
+    myAvatar = a;
+    document.querySelectorAll('.avatar-select').forEach(el => el.classList.remove('selected'));
+    av.classList.add('selected');
+    avatarPreview.style.display = 'none';
+    avatarPreview.src = '';
+  };
+  avatarGrid.appendChild(av);
 });
-
-$('msg').addEventListener('keyup', () => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    clearTimeout(typingTimer);
-    typingTimer = setTimeout(() => {
-        ws.send(JSON.stringify({ type: 'typing_stop', nickname, room }));
-    }, 2000); // 2秒後發送停止
-});
-
-
-// 產生用於訊息關聯的 ID
-const genId = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
-
-// 頭貼上傳（只允許自訂頭貼）
-$('upload').addEventListener('change', e => {
-  const f = e.target.files[0]; if (!f) return;
+const avatarUpload = document.getElementById('avatarUpload');
+const avatarPreview = document.getElementById('avatar-preview');
+avatarUpload.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => { customAvatar = reader.result; };
-  reader.readAsDataURL(f);
+  reader.onload = re => {
+    const fullSizeBase64 = re.target.result;
+    resizeImage(fullSizeBase64, 96, (resizedBase64) => {
+      myAvatar = resizedBase64;
+      avatarPreview.src = myAvatar;
+      avatarPreview.style.display = 'block';
+      document.querySelectorAll('.avatar-select').forEach(el => el.classList.remove('selected'));
+    });
+  };
+  reader.readAsDataURL(file);
 });
 
-// ===== 加入聊天室 =====
-function joinChat() {
-  nickname = $('nickname').value.trim();
-  room = $('room').value.trim();
-  avatar = customAvatar;
-  if (!nickname || !room || !avatar) return alert("請輸入暱稱、房間，並上傳頭貼");
+// (login 函式與上一版相同)
+function login() {
+  myNickname = nicknameInput.value.trim();
+  if (myNickname && myAvatar) {
+    localStorage.setItem("chatUser", myNickname);
+    localStorage.setItem("chatAvatar", myAvatar);
+    loginWindow.style.display = 'none';
+    chatWindow.style.display = 'block';
+    initWS();
+  } else {
+    alert('請輸入暱稱並選擇頭像！');
+  }
+}
 
-  ws = new WebSocket(`ws://${location.host}/ws`);
+// ✨ (BUG 1) 移除錯誤的 JS
+// (initWS, handleIncoming, sendMsg 等函式與上一版相同)
+function initWS() {
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${window.location.host}/ws`);
   ws.onopen = () => {
-    ws.send(JSON.stringify({ type: 'join', nickname, room, avatar }));
+    console.log('Connected to WS');
+    switchRoom(currentRoom, true);
   };
-  ws.onmessage = (ev) => handleIncoming(JSON.parse(ev.data));
-
-  $('login').style.display = 'none';
-  $('chat').style.display = 'block';
-  $('roomTitle').textContent = `房間：${room}`;
-}
-
-// ===== 發送純文字訊息 + 彈幕 + 關鍵字特效（由所有人接收後觸發）=====
-function sendMessage() {
-  const content = $('msg').value.trim();
-  if (!content) return;
-  const id = genId();
-  
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    clearTimeout(typingTimer);
-    ws.send(JSON.stringify({ type: 'typing_stop', nickname, room }));
-  }
-
-  ws.send(JSON.stringify({ type: 'chat', id, nickname, room, avatar, content }));
-  $('msg').value = '';
-}
-
-$('msg').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-        sendMessage();
-    }
-});
-
-// ===== 投票（沿用你原有的概念）=====
-function sendVote(option) {
-  ws.send(JSON.stringify({ type: 'vote', nickname, room, avatar, content: option }));
-}
-
-// ===== 退出 / 切換 =====
-function leaveRoom() {
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify({ type: 'leave', nickname, room }));
-    ws.close();
-  }
-  messagesEl.innerHTML = '';
-  $('chat').style.display = 'none';
-  $('login').style.display = 'block';
-}
-function switchRoom() {
-  const newR = $('newRoom').value.trim(); if (!newR) return;
-  ws.send(JSON.stringify({ type: 'switch', nickname, room, content: newR }));
-  room = newR; $('roomTitle').textContent = `房間：${room}`;
-}
-
-// ===== 即時搶答 =====
-let quizActive = false;
-let quizAnswer = '';
-function startQuiz() {
-  const q = $('quizQuestion').value.trim();
-  const a = $('quizAnswer').value.trim();
-  if (!q || !a) return alert('請輸入題目與答案');
-  ws.send(JSON.stringify({ type: 'quiz_start', nickname, room, question: q, answer: a }));
-}
-function submitQuizAnswer() {
-  const a = $('quizMyAnswer').value.trim();
-  if (!quizActive) return alert('目前沒有進行中的題目');
-  if (!a) return;
-  ws.send(JSON.stringify({ type: 'quiz_answer', nickname, room, answer: a }));
-  $('quizMyAnswer').value = '';
-}
-
-// ===== 表情反應（對特定訊息）=====
-const REACTIONS = ['👍','😂','❤️','🚀'];
-function sendReaction(messageId, emoji) {
-  ws.send(JSON.stringify({ type: 'reaction', nickname, room, messageId, emoji }));
-}
-
-// ===== 語音訊息 + 語音轉文字 =====
-let mediaRecorder = null, chunks = [], recognizing = false, speechRec = null;
-function toggleRecord() {
-  if (mediaRecorder && mediaRecorder.state === 'recording') {
-    mediaRecorder.stop(); $('recBtn').textContent = '開始錄音';
-    if (speechRec && recognizing) speechRec.stop();
-    return;
-  }
-  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-    mediaRecorder = new MediaRecorder(stream);
-    chunks = [];
-    mediaRecorder.ondataavailable = e => chunks.push(e.data);
-    mediaRecorder.onstop = async () => {
-      const blob = new Blob(chunks, { type: 'audio/webm' });
-      const base64 = await blobToDataURL(blob);
-      // 若有 STT 結果就一起帶上
-      ws.send(JSON.stringify({ type: 'voice', nickname, room, avatar, audio: base64, transcript: lastTranscript }));
-      lastTranscript = '';
-      $('sttStatus').textContent = '';
-    };
-    mediaRecorder.start();
-    $('recBtn').textContent = '停止錄音';
-    tryStartSTT();
-  }).catch(() => alert('無法取得麥克風'));
-}
-function blobToDataURL(blob) {
-  return new Promise(res => {
-    const r = new FileReader();
-    r.onload = () => res(r.result);
-    r.readAsDataURL(blob);
-  });
-}
-let lastTranscript = '';
-function tryStartSTT() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { $('sttStatus').textContent = '（裝置不支援語音轉文字）'; return; }
-  speechRec = new SR();
-  speechRec.lang = 'zh-TW';
-  speechRec.interimResults = true;
-  recognizing = true;
-  speechRec.onresult = e => {
-    let text = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) text += e.results[i][0].transcript;
-    lastTranscript = text;
-    $('sttStatus').textContent = 'STT：' + text;
+  ws.onmessage = event => {
+    const msg = JSON.parse(event.data);
+    handleIncoming(msg);
   };
-  speechRec.onend = () => recognizing = false;
-  try { speechRec.start(); } catch {}
+  ws.onclose = () => {
+    console.log('Disconnected from WS');
+    addSystemMessage('連線已中斷，請重新整理頁面。');
+  };
+  ws.onerror = err => {
+    console.error('WS Error:', err);
+    addSystemMessage('連線發生錯誤。');
+  };
 }
 
-// ===== 圖片/GIF 上傳 + 拖曳 =====
-$('imgPicker').addEventListener('change', async (e) => {
-  await sendFiles(e.target.files);
-  e.target.value = '';
-});
-$('dropzone').addEventListener('dragover', e => { e.preventDefault(); $('dropzone').classList.add('dragover'); });
-$('dropzone').addEventListener('dragleave', () => $('dropzone').classList.remove('dragover'));
-$('dropzone').addEventListener('drop', async e => {
-  e.preventDefault(); $('dropzone').classList.remove('dragover');
-  await sendFiles(e.dataTransfer.files);
-});
-function sendPickedImages() {
-  $('imgPicker').click();
-}
-async function sendFiles(fileList) {
-  const files = Array.from(fileList || []);
-  for (const f of files) {
-    if (!f.type.startsWith('image/')) continue;
-    const dataUrl = await fileToDataURL(f);
-    ws.send(JSON.stringify({ type: 'image', nickname, room, avatar, name: f.name, mime: f.type, dataUrl }));
-  }
-}
-function fileToDataURL(file) {
-  return new Promise(res => {
-    const r = new FileReader();
-    r.onload = () => res(r.result);
-    r.readAsDataURL(file);
-  });
-}
-
-// ===== 收到訊息的總處理 =====
 function handleIncoming(msg) {
   switch (msg.type) {
-    case 'chat':
-      renderChatMessage(msg);
-      if (msg.content && msg.content.includes('流星')) spawnSpecialMeteor();
+    case 'online_count':
+      document.getElementById('online-count').textContent = msg.content;
       break;
-    case 'reaction':
-      renderReaction(msg.messageId, msg.emoji);
+    case 'room_list':
+      updateRoomList(msg.options); 
       break;
-    case 'image':
-      renderImageMessage(msg);
+    case 'history':
+      messagesEl.innerHTML = '';
+      (msg.messages || []).forEach(m => renderMessage(m));
+      addSystemMessage(`已加入房間: ${currentRoom}`);
       break;
-    case 'voice':
-      renderVoiceMessage(msg);
-      break;
+    case 'chat': case 'image': case 'voice':
+      renderMessage(msg); break;
+    case 'join': case 'leave': case 'switch':
+      addSystemMessage(msg.content); break;
+    case 'vote':
+      renderVote(msg); break;
+    case 'vote_result':
+      updateVoteResults(msg); break;
     case 'quiz_start':
-      quizActive = true; quizAnswer = (msg.answer || '').trim();
-      $('quizStatus').textContent = `題目：${msg.question}（搶答開始！）`;
-      addSystemMessage(`【搶答】${msg.nickname} 發起題目：${msg.question}`);
-      break;
+      quizAnswer = msg.answer; renderQuiz(msg); break;
     case 'quiz_answer':
-      // 第一個答對的人廣播 quiz_result；為簡化，任一端判斷正確即廣播（示範用）
-      if (quizActive && normalize(msg.answer) === normalize(quizAnswer)) {
-        ws.send(JSON.stringify({ type: 'quiz_result', nickname: msg.nickname, room, correct: true, answer: msg.answer }));
-      }
       break;
     case 'quiz_result':
-      quizActive = false;
-      $('quizStatus').textContent = `🏆 得主：${msg.nickname}，答案：${msg.answer}`;
-      addSystemMessage(`🏆 【搶答結果】${msg.nickname} 率先答對！答案：${msg.answer}`);
+      quizAnswer = ''; updateQuizResult(msg); break;
+    case 'reaction': {
+      const floatTarget = Array.from(messagesEl.children).find(li => li.dataset.id === msg.content);
+      if (floatTarget) {
+        const flo = document.createElement('div'); flo.className = 'reaction-float'; flo.textContent = msg.emoji;
+        flo.style.left = '60px'; flo.style.top = '10px';
+        floatTarget.appendChild(flo); setTimeout(() => flo.remove(), 1400);
+      }
+      if (!floatTarget) return; 
+      const reactionsEl = floatTarget.querySelector('.msg-reactions');
+      if (!reactionsEl) return; 
+      let countBtn = reactionsEl.querySelector(`[data-emoji="${msg.emoji}"]`);
+      if (!countBtn) {
+        countBtn = document.createElement('button');
+        countBtn.dataset.emoji = msg.emoji;
+        countBtn.dataset.count = 1;
+        countBtn.textContent = `${msg.emoji} 1`;
+        countBtn.onclick = () => { sendReaction(msg.content, msg.emoji); };
+        reactionsEl.appendChild(countBtn);
+      } else {
+        const newCount = parseInt(countBtn.dataset.count) + 1;
+        countBtn.dataset.count = newCount;
+        countBtn.textContent = `${msg.emoji} ${newCount}`;
+      }
       break;
-    case 'user_list':
-      renderUserList(JSON.parse(msg.content));
-      break;
-    case 'typing_start':
-      if (msg.nickname === nickname) return;
-      typingUsers.add(msg.nickname);
-      updateTypingIndicator();
-      break;
-    case 'typing_stop':
-      if (msg.nickname === nickname) return;
-      typingUsers.delete(msg.nickname);
-      updateTypingIndicator();
-      break;
-    default:
-      // 其他自定型別...
-      break;
+    }
   }
 }
 
-function updateTypingIndicator() {
-  const indicator = $('typing-indicator');
-  if (typingUsers.size === 0) {
-    indicator.textContent = '';
-    return;
+function sendMsg() {
+  const content = messageInput.value.trim();
+  if (imageToSend) {
+    ws.send(JSON.stringify({
+      type: 'image', room: currentRoom, nickname: myNickname, avatar: myAvatar,
+      content: imageToSend, timestamp: new Date().toISOString()
+    }));
+    document.getElementById('cancel-image').onclick(); 
+  } else if (audioToSend) {
+    ws.send(JSON.stringify({
+      type: 'voice', room: currentRoom, nickname: myNickname, avatar: myAvatar,
+      content: audioToSend, transcript: content, timestamp: new Date().toISOString()
+    }));
+    document.getElementById('cancel-audio').onclick();
+  } else if (content) {
+    ws.send(JSON.stringify({
+      type: 'chat', room: currentRoom, nickname: myNickname, avatar: myAvatar,
+      content: content, timestamp: new Date().toISOString()
+    }));
+    messageInput.value = '';
   }
-  
-  const users = Array.from(typingUsers);
-  if (users.length === 1) {
-    indicator.textContent = `${users[0]} is typing...`;
-  } else if (users.length === 2) {
-    indicator.textContent = `${users.join(' and ')} are typing...`;
+}
+messageInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+});
+imageInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { alert('圖片太大！請上傳 5MB 以下的圖片。'); return; }
+  const reader = new FileReader();
+  reader.onload = re => {
+    imageToSend = re.target.result; 
+    document.getElementById('image-preview').src = imageToSend;
+    document.getElementById('image-preview-container').style.display = 'flex';
+    messageInput.disabled = true; 
+    messageInput.placeholder = '已附加圖片';
+    voiceBtn.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+  imageInput.value = null; 
+});
+document.getElementById('cancel-image').onclick = () => {
+  imageToSend = null;
+  document.getElementById('image-preview').src = '';
+  document.getElementById('image-preview-container').style.display = 'none';
+  messageInput.disabled = false;
+  messageInput.placeholder = '輸入訊息...';
+  voiceBtn.style.display = 'flex';
+};
+document.getElementById('cancel-audio').onclick = () => {
+  audioToSend = null;
+  audioTranscript = null;
+  document.getElementById('audio-preview-container').style.display = 'none';
+  messageInput.value = '';
+  messageInput.placeholder = '輸入訊息...';
+  document.getElementById('image-label').style.display = 'flex';
+};
+function switchRoom(room, firstTime = false) {
+  if (room === currentRoom && !firstTime) return;
+  currentRoom = room;
+  ws.send(JSON.stringify({
+    type: 'switch', room: room, nickname: myNickname,
+    avatar: myAvatar, timestamp: new Date().toISOString()
+  }));
+  document.querySelectorAll('#room-list li').forEach(li => {
+    li.classList.toggle('active', li.dataset.room === room);
+  });
+}
+function createRoom() {
+  const roomName = newRoomInput.value.trim().toLowerCase().replace(/ /g, '-');
+  if (roomName) { switchRoom(roomName); newRoomInput.value = ''; }
+}
+function updateRoomList(rooms) {
+  roomListEl.innerHTML = '';
+  rooms.forEach(room => {
+    const li = document.createElement('li');
+    li.dataset.room = room;
+    li.textContent = room;
+    li.className = (room === currentRoom) ? 'active' : '';
+    li.onclick = () => switchRoom(room);
+    roomListEl.appendChild(li);
+  });
+}
+function renderMessage(msg) {
+  const li = document.createElement('li');
+  li.className = 'message';
+  li.dataset.id = msg.timestamp;
+  const avatar = document.createElement('img');
+  avatar.className = 'msg-avatar';
+  if (msg.avatar.startsWith('http') || msg.avatar.startsWith('data:')) {
+    avatar.src = msg.avatar;
   } else {
-    indicator.textContent = 'Several people are typing...';
+    const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64;
+    const ctx = canvas.getContext('2d'); ctx.font = '48px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(msg.avatar, 32, 36);
+    avatar.src = canvas.toDataURL();
   }
-}
-
-// ===== UI 渲染 =====
-function renderUserList(users) {
-  const userListEl = $('user-list');
-  userListEl.innerHTML = '';
-  if (users && users.length > 0) {
-    users.forEach(user => {
-      const li = document.createElement('li');
-      li.textContent = user;
-      li.style.padding = '5px';
-      li.style.borderBottom = '1px solid rgba(255,255,255,0.1)';
-      userListEl.appendChild(li);
-    });
-  }
-}
-function renderChatMessage(msg) {
-  const li = document.createElement('li'); li.className = 'message'; li.dataset.id = msg.id || genId();
-  const img = document.createElement('img'); img.className = 'avatar'; img.src = msg.avatar || ''; li.appendChild(img);
+  li.appendChild(avatar);
   const body = document.createElement('div'); body.className = 'msg-body';
-  const header = document.createElement('div'); header.className = 'msg-header'; header.textContent = `[${msg.nickname}]`;
-  const timestamp = document.createElement('span');
-  timestamp.style.fontSize = '0.8em'; timestamp.style.opacity = '0.7'; timestamp.style.marginLeft = '8px';
-  timestamp.textContent = msg.timestamp || '';
-  header.appendChild(timestamp);
-  const content = document.createElement('div'); content.className = 'msg-content'; content.textContent = msg.content || '';
-  const bar = document.createElement('div'); bar.className = 'reaction-bar';
-  REACTIONS.forEach(em => {
-    const b = document.createElement('button'); b.className = 'reaction-btn'; b.textContent = em;
-    b.onclick = () => sendReaction(li.dataset.id, em);
-    bar.appendChild(b);
-  });
-  body.appendChild(header); body.appendChild(content); body.appendChild(bar);
-  li.appendChild(body);
-  messagesEl.appendChild(li);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-
-  // 彈幕
-  if (msg.content && msg.content.trim() !== '') {
-    const bullet = document.createElement('div'); bullet.className = 'bullet';
-    bullet.style.top = Math.random() * 80 + '%'; bullet.textContent = msg.content;
-    document.body.appendChild(bullet); setTimeout(() => bullet.remove(), 10000);
+  const header = document.createElement('div'); header.className = 'msg-header';
+  header.textContent = msg.nickname; body.appendChild(header);
+  const content = document.createElement('div'); content.className = 'msg-content';
+  switch (msg.type) {
+    case 'chat':
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      content.innerHTML = msg.content.replace(urlRegex, '<a href="$1" target="_blank">$1</a>');
+      break;
+    case 'image':
+      const img = document.createElement('img'); img.src = msg.content;
+      img.style.maxWidth = '100%'; img.style.maxHeight = '300px'; img.style.borderRadius = '8px';
+      img.onload = () => messagesEl.scrollTop = messagesEl.scrollHeight;
+      content.appendChild(img);
+      break;
+    case 'voice': renderVoiceMessage(content, msg); break;
   }
-}
-
-function renderImageMessage(msg) {
-  const li = document.createElement('li'); li.className = 'message'; li.dataset.id = msg.id || genId();
-  const imgA = document.createElement('img'); imgA.className = 'avatar'; imgA.src = msg.avatar || ''; li.appendChild(imgA);
-  const body = document.createElement('div'); body.className = 'msg-body';
-  const header = document.createElement('div'); header.className = 'msg-header'; header.textContent = `[${msg.nickname}] 分享了圖片 ${msg.name || ''}`;
-  const timestamp = document.createElement('span');
-  timestamp.style.fontSize = '0.8em'; timestamp.style.opacity = '0.7'; timestamp.style.marginLeft = '8px';
-  timestamp.textContent = msg.timestamp || '';
-  header.appendChild(timestamp);
-  const media = document.createElement('img'); media.className = 'msg-media'; media.src = msg.dataUrl; media.alt = msg.name || 'image';
-  media.onclick = () => showModal(media.src);
-  const bar = document.createElement('div'); bar.className = 'reaction-bar';
-  REACTIONS.forEach(em => {
-    const b = document.createElement('button'); b.className = 'reaction-btn'; b.textContent = em;
-    b.onclick = () => sendReaction(li.dataset.id, em);
-    bar.appendChild(b);
+  body.appendChild(content);
+  const emojiPicker = document.createElement('div'); emojiPicker.className = 'msg-emoji-picker';
+  const emojis = ['👍', '❤️', '😂', '😮', '😢'];
+  emojis.forEach(emoji => {
+    const btn = document.createElement('button'); btn.textContent = emoji;
+    btn.onclick = () => sendReaction(msg.timestamp, emoji);
+    emojiPicker.appendChild(btn);
   });
-  body.appendChild(header); body.appendChild(media); body.appendChild(bar);
+  body.appendChild(emojiPicker);
+  const reactionsEl = document.createElement('div'); reactionsEl.className = 'msg-reactions';
+  body.appendChild(reactionsEl);
   li.appendChild(body);
   messagesEl.appendChild(li);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
-
-function renderVoiceMessage(msg) {
-  const li = document.createElement('li'); li.className = 'message'; li.dataset.id = msg.id || genId();
-  const imgA = document.createElement('img'); imgA.className = 'avatar'; imgA.src = msg.avatar || ''; li.appendChild(imgA);
-  const body = document.createElement('div'); body.className = 'msg-body';
-  const header = document.createElement('div'); header.className = 'msg-header'; header.textContent = `[${msg.nickname}] 語音訊息`;
-  const timestamp = document.createElement('span');
-  timestamp.style.fontSize = '0.8em'; timestamp.style.opacity = '0.7'; timestamp.style.marginLeft = '8px';
-  timestamp.textContent = msg.timestamp || '';
-  header.appendChild(timestamp);
-  const audio = document.createElement('audio'); audio.controls = true; audio.src = msg.audio;
-  const transcript = document.createElement('div'); transcript.className = 'msg-content'; transcript.style.opacity = '0.85';
-  transcript.textContent = msg.transcript ? `STT：${msg.transcript}` : '';
-  const bar = document.createElement('div'); bar.className = 'reaction-bar';
-  REACTIONS.forEach(em => {
-    const b = document.createElement('button'); b.className = 'reaction-btn'; b.textContent = em;
-    b.onclick = () => sendReaction(li.dataset.id, em);
-    bar.appendChild(b);
-  });
-  body.appendChild(header); body.appendChild(audio); if (msg.transcript) body.appendChild(transcript); body.appendChild(bar);
-  li.appendChild(body);
-  messagesEl.appendChild(li);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+function renderVoiceMessage(content, msg) {
+  const audio = new Audio(msg.content);
+  const bar = document.createElement('div');
+  bar.style.display = 'flex'; bar.style.alignItems = 'center';
+  const playBtn = document.createElement('button'); playBtn.textContent = '▶️ 播放';
+  const duration = document.createElement('span'); duration.textContent = ' 00:00';
+  bar.appendChild(playBtn); bar.appendChild(duration);
+  audio.onloadedmetadata = () => { duration.textContent = ` ${Math.floor(audio.duration)}s`; };
+  playBtn.onclick = () => {
+    if (audio.paused) { audio.play(); playBtn.textContent = '⏸️ 暫停'; }
+    else { audio.pause(); playBtn.textContent = '▶️ 播放'; }
+  };
+  audio.onended = () => { playBtn.textContent = '▶️ 播放'; };
+  const transcript = document.createElement('i');
+  if (msg.transcript) {
+    transcript.textContent = `"${msg.transcript}"`;
+    transcript.style.display = 'block'; transcript.style.marginTop = '5px';
+    transcript.style.opacity = '0.8';
+  }
+  content.appendChild(bar); 
+  if (msg.transcript) content.appendChild(transcript);
 }
-
-function renderReaction(messageId, emoji) {
-  // 找到訊息元素
-  const target = Array.from(messagesEl.children).find(li => li.dataset.id === messageId);
-  if (!target) return;
-  // 漂浮動畫
-  const flo = document.createElement('div'); flo.className = 'reaction-float'; flo.textContent = emoji;
-  flo.style.left = '60px'; flo.style.top = '10px';
-  target.appendChild(flo); setTimeout(() => flo.remove(), 1400);
-}
-
-// 系統訊息
 function addSystemMessage(text) {
-  const li = document.createElement('li'); li.className = 'message';
+  const li = document.createElement('li'); li.className = 'message system';
   const body = document.createElement('div'); body.className = 'msg-body';
-  const header = document.createElement('div'); header.className = 'msg-header'; header.textContent = '系統';
-  const content = document.createElement('div'); content.className = 'msg-content'; content.textContent = text;
-  body.appendChild(header); body.appendChild(content); li.appendChild(body);
+  const content = document.createElement('div'); content.className = 'msg-content';
+  content.textContent = text;
+  body.appendChild(content); li.appendChild(body);
   messagesEl.appendChild(li);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
+if ('MediaRecorder' in window && 'webkitSpeechRecognition' in window) {
+  const recognition = new webkitSpeechRecognition();
+  recognition.continuous = false; recognition.lang = 'cmn-Hant-TW'; recognition.interimResults = false;
+  let finalTranscript = '';
+  recognition.onresult = event => { finalTranscript = event.results[0][0].transcript; };
+  const startRec = () => {
+    if (imageToSend) return;
+    audioChunks = [];
+    mediaRecorder.start(); recognition.start();
+    recStatus.classList.add('rec'); voiceBtn.textContent = '... 錄音中 ...';
+  };
+  const stopRec = () => {
+    mediaRecorder.stop(); recognition.stop();
+    recStatus.classList.remove('rec'); voiceBtn.textContent = '🎤 語音 (按住)';
+  };
+  recognition.onend = () => {
+    if (audioChunks.length === 0) {
+        finalTranscript = ''; return;
+    }
+    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+    const reader = new FileReader();
+    reader.onload = () => {
+        audioToSend = reader.result;
+        audioTranscript = finalTranscript;
+        messageInput.value = finalTranscript;
+        messageInput.placeholder = '語音訊息已附加 (可編輯文字)';
+        messageInput.focus();
+        document.getElementById('audio-preview-container').style.display = 'flex';
+        document.getElementById('image-label').style.display = 'none';
+    };
+    reader.readAsDataURL(audioBlob);
+    audioChunks = [];
+    finalTranscript = '';
+  };
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(stream => {
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+      voiceInput.onchange = () => { if (voiceInput.checked) startRec(); else stopRec(); };
+      voiceBtn.onmousedown = voiceInput.onchange; voiceBtn.onmouseup = voiceInput.onchange;
+      voiceBtn.ontouchstart = e => { e.preventDefault(); voiceInput.checked = true; voiceInput.onchange(); };
+      voiceBtn.ontouchend = e => { e.preventDefault(); voiceInput.checked = false; voiceInput.onchange(); };
+    });
+} else {
+  voiceBtn.textContent = '🚫 不支援語音'; voiceBtn.disabled = true;
+}
 
-// 工具
-function normalize(s) { return (s || '').toString().trim().toLowerCase(); }
-
-// 圖片放大
-function showModal(src) { $('modalImg').src = src; $('imgModal').style.display = 'flex'; }
-function hideModal() { $('imgModal').style.display = 'none'; $('modalImg').src = ''; }
+// ✨ (功能 1) Modal JS
+function showQuizModal() {
+  modalBackdrop.style.display = 'block';
+  quizModal.style.display = 'block';
+  document.getElementById('quiz-question').focus();
+}
+function showVoteModal() {
+  modalBackdrop.style.display = 'block';
+  voteModal.style.display = 'block';
+  document.getElementById('vote-question').focus();
+}
+function closeModals() {
+  modalBackdrop.style.display = 'none';
+  quizModal.style.display = 'none';
+  voteModal.style.display = 'none';
+}
+function submitQuiz() {
+  const question = document.getElementById('quiz-question').value;
+  const answer = document.getElementById('quiz-answer').value;
+  if (!question || !answer) {
+    alert('題目和答案都不能為空！'); return;
+  }
+  ws.send(JSON.stringify({
+    type: 'quiz_start', room: currentRoom, nickname: myNickname, avatar: myAvatar,
+    question: question, answer: normalize(answer), timestamp: new Date().toISOString()
+  }));
+  closeModals();
+  document.getElementById('quiz-question').value = '';
+  document.getElementById('quiz-answer').value = '';
+}
+function submitVote() {
+  const question = document.getElementById('vote-question').value;
+  const optionsStr = document.getElementById('vote-options').value;
+  if (!question || !optionsStr) {
+    alert('問題和選項都不能為空！'); return;
+  }
+  const options = optionsStr.split(',').map(s => s.trim()).filter(s => s);
+  if (options.length < 2) {
+    alert('至少需要兩個選項'); return;
+  }
+  ws.send(JSON.stringify({
+    type: 'vote', room: currentRoom, nickname: myNickname, avatar: myAvatar,
+    question: question, options: options, timestamp: new Date().toISOString()
+  }));
+  closeModals();
+  document.getElementById('vote-question').value = '';
+  document.getElementById('vote-options').value = '';
+}
+// (舊的投票/搶答函式 renderVote, sendVote... 等與上一版相同)
+function renderVote(msg) {
+  const li = document.createElement('li'); li.className = 'message system'; li.dataset.id = msg.timestamp;
+  const body = document.createElement('div'); body.className = 'msg-body';
+  const content = document.createElement('div'); content.className = 'msg-content msg-vote';
+  content.innerHTML = `<strong>📊 ${msg.nickname} 發起了投票：</strong><br>${msg.question}`;
+  const optionsEl = document.createElement('div'); optionsEl.style.marginTop = '10px';
+  msg.options.forEach(opt => {
+    const optBtn = document.createElement('a'); optBtn.className = 'vote-option';
+    optBtn.textContent = opt; optBtn.href = '#';
+    optBtn.onclick = e => {
+      e.preventDefault(); sendVote(msg.timestamp, opt);
+      optionsEl.querySelectorAll('a').forEach(a => { a.style.pointerEvents = 'none'; a.style.opacity = '0.6'; });
+      optBtn.style.background = 'rgba(135, 206, 250, 0.4)';
+    };
+    optionsEl.appendChild(optBtn);
+  });
+  content.appendChild(optionsEl);
+  const resultEl = document.createElement('div'); resultEl.className = 'vote-result';
+  content.appendChild(resultEl);
+  body.appendChild(content); li.appendChild(body);
+  messagesEl.appendChild(li); messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+function sendVote(voteId, option) {
+  ws.send(JSON.stringify({ type: 'vote_answer', room: currentRoom, content: voteId, answer: option }));
+}
+function updateVoteResults(msg) {
+  const voteEl = document.querySelector(`li[data-id="${msg.content}"] .msg-vote`);
+  if (!voteEl) return;
+  const resultEl = voteEl.querySelector('.vote-result');
+  resultEl.innerHTML = '<strong>結果：</strong><br>';
+  for (const [option, count] of Object.entries(msg.results)) {
+    resultEl.innerHTML += `${option}: ${count} 票<br>`;
+  }
+}
+function renderQuiz(msg) {
+  const li = document.createElement('li'); li.className = 'message system'; li.dataset.id = msg.timestamp;
+  const body = document.createElement('div'); body.className = 'msg-body';
+  const content = document.createElement('div'); content.className = 'msg-content msg-quiz';
+  content.innerHTML = `<strong>🧠 ${msg.nickname} 發起了搶答：</strong><br>${msg.question}`;
+  const inputEl = document.createElement('div'); inputEl.className = 'quiz-input';
+  const answerInput = document.createElement('input'); answerInput.type = 'text';
+  answerInput.placeholder = '輸入答案...';
+  const submitBtn = document.createElement('button'); submitBtn.textContent = '搶答！';
+  const sendAnswer = () => {
+    const ans = answerInput.value;
+    if (ans) { submitQuizAnswer(msg.timestamp, ans); answerInput.disabled = true; submitBtn.disabled = true; }
+  };
+  submitBtn.onclick = sendAnswer;
+  answerInput.onkeydown = e => { if (e.key === 'Enter') sendAnswer(); };
+  inputEl.appendChild(answerInput); inputEl.appendChild(submitBtn);
+  content.appendChild(inputEl);
+  body.appendChild(content); li.appendChild(body);
+  messagesEl.appendChild(li); messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+function submitQuizAnswer(quizId, answer) {
+  ws.send(JSON.stringify({
+    type: 'quiz_answer', room: currentRoom, nickname: myNickname, avatar: myAvatar,
+    content: quizId, answer: normalize(answer) 
+  }));
+}
+function updateQuizResult(msg) {
+  addSystemMessage(`🏆 搶答結束！ ${msg.nickname} 答對了！答案是：${msg.answer}`);
+  const quizEl = document.querySelector(`li[data-id="${msg.content}"] .msg-quiz`);
+  if (quizEl) {
+    quizEl.classList.add('answered');
+    const inputEl = quizEl.querySelector('.quiz-input');
+    if (inputEl) inputEl.style.display = 'none'; 
+  }
+}
+function sendReaction(messageId, emoji) {
+  ws.send(JSON.stringify({
+    type: 'reaction', room: currentRoom, content: messageId, emoji: emoji
+  }));
+}
+function normalize(s) {
+  return (s || '').trim().toLowerCase()
+    .replace(/[！。？，]/g, m => ({'！':'!','。':'.','？':'?','，':','}[m]));
+}
 </script>
 </body>
 </html>
