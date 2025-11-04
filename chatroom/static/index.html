@@ -158,13 +158,14 @@ button:hover, label.button:hover { background: rgba(255,255,255,0.25); cursor: p
   <div class="row" style="justify-content: space-between; margin-bottom: 10px;">
     <h3>💬 聊天室</h3>
     <div>
-      <button onclick="location.href='game.html'">🎮 猜數字</button>
-      <button onclick="location.href='draw.html'">🎨 你畫我猜</button>
+      <button onclick="goToGame('game.html')">🎮 猜數字</button>
+      <button onclick="goToGame('draw.html')">🎨 你畫我猜</button>
     </div>
   </div>
   <div id="chat-content">
     <div id="sidebar">
       <div id="online-status">🟢 在線：<span id="online-count">0</span> 人</div>
+      <button onclick="logout()" style="width:100%; margin-bottom:15px;">登出</button>
       <h3>房間列表</h3>
       <ul id="room-list"></ul>
       <div class="col">
@@ -294,7 +295,10 @@ const voteModal = document.getElementById('vote-modal');
 let ws;
 let myNickname = '';
 let myAvatar = '';
-let currentRoom = 'lobby';
+let currentRoom = localStorage.getItem('lastRoom') || 'lobby';
+if (localStorage.getItem('lastRoom')) {
+  localStorage.removeItem('lastRoom');
+}
 let roomInfo = {};
 let quizAnswer = ''; 
 let mediaRecorder;
@@ -302,6 +306,22 @@ let audioChunks = [];
 let imageToSend = null;
 let audioToSend = null; 
 let audioTranscript = null;
+
+function goToGame(url) {
+  localStorage.setItem('lastRoom', currentRoom);
+  location.href = url;
+}
+
+function logout() {
+  localStorage.removeItem("chatUser");
+  localStorage.removeItem("chatAvatar");
+  localStorage.removeItem("lastRoom");
+  if (ws) {
+    ws.onclose = () => {}; // Prevent the default disconnect message
+    ws.close();
+  }
+  location.reload();
+}
 
 // (頭像邏輯與上一版相同)
 const avatars = ['😀','😎','🚀','🤖','🧠','🎨','🎮','🏆','💡','📊'];
@@ -798,6 +818,20 @@ function normalize(s) {
   return (s || '').trim().toLowerCase()
     .replace(/[！。？，]/g, m => ({'！':'!','。':'.','？':'?','，':','}[m]));
 }
+
+function checkExistingLogin() {
+  const storedUser = localStorage.getItem("chatUser");
+  const storedAvatar = localStorage.getItem("chatAvatar");
+  if (storedUser && storedAvatar) {
+    myNickname = storedUser;
+    myAvatar = storedAvatar;
+    loginWindow.style.display = 'none';
+    chatWindow.style.display = 'block';
+    initWS();
+  }
+}
+window.onload = checkExistingLogin;
+
 </script>
 </body>
 </html>

@@ -185,6 +185,8 @@ const wordDisplay = document.getElementById('word-display');
 const drawContainer = document.getElementById('draw-container');
 let isDrawing = false;
 let canDraw = false;
+let lastSendTime = 0;
+let drawThrottleTimeout = null;
 
 window.onload = () => {
   myNickname = localStorage.getItem("chatUser");
@@ -284,7 +286,7 @@ function startDrawing(e) {
   isDrawing = true;
   const { x, y } = getMousePos(e);
   const msg = {
-    type: 'draw_start', room: '_draw_game_',
+    type: 'draw_start', room: '_draw_game_', nickname: myNickname,
     x: x / canvas.width,
     y: y / canvas.height,
     color: colorPicker.value,
@@ -297,9 +299,18 @@ function startDrawing(e) {
 function draw(e) {
   if (!isDrawing || !canDraw) return;
   e.preventDefault();
+
+  const now = Date.now();
+  if (now - lastSendTime < 30) { // Throttle to ~33 messages/sec
+    clearTimeout(drawThrottleTimeout);
+    drawThrottleTimeout = setTimeout(() => draw(e), 30 - (now - lastSendTime));
+    return;
+  }
+  lastSendTime = now;
+
   const { x, y } = getMousePos(e);
   const msg = {
-    type: 'draw_move', room: '_draw_game_',
+    type: 'draw_move', room: '_draw_game_', nickname: myNickname,
     x: x / canvas.width,
     y: y / canvas.height
   };
@@ -309,8 +320,9 @@ function draw(e) {
 
 function stopDrawing() {
   if (!isDrawing) return;
+  clearTimeout(drawThrottleTimeout);
   isDrawing = false;
-  const msg = { type: 'draw_end', room: '_draw_game_' };
+  const msg = { type: 'draw_end', room: '_draw_game_', nickname: myNickname };
   ws.send(JSON.stringify(msg));
   drawOnCanvas(msg);
 }
